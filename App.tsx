@@ -48,9 +48,9 @@ const MOCK_OFFERS = [
 ];
 
 const DRINKS = [
-  { id: '1', name: 'TEQUILA SHOT', price: 560 },
-  { id: '2', name: 'MOJITO', price: 840 },
-  { id: '3', name: 'GIN TONIC', price: 700 },
+  { id: '1', name: 'TEQUILA SHOT', nameJa: 'テキーラショット', price: 560 },
+  { id: '2', name: 'MOJITO', nameJa: 'モヒート', price: 840 },
+  { id: '3', name: 'GIN TONIC', nameJa: 'ジントニック', price: 700 },
 ];
 
 const getMoodLabel = (mood: Mood) => {
@@ -98,6 +98,8 @@ export default function App() {
 
   // Match state
   const [matchSignalNumber, setMatchSignalNumber] = useState(77);
+  const [matchDrinkPrice, setMatchDrinkPrice] = useState(0);
+  const [matchQuickMode, setMatchQuickMode] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(300);
   const [hasArrived, setHasArrived] = useState(false);
   const [partnerArrived, setPartnerArrived] = useState(false);
@@ -168,6 +170,8 @@ export default function App() {
   const handleConfirmOffer = () => {
     if (!selectedUser || !selectedDrink) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const userQuickMode = selectedUser.quick_mode;
+    const drinkPrice = selectedDrink.price;
     setPendingOffers([...pendingOffers, selectedUser.id]);
     setShowOfferWarning(false);
     setSelectedUser(null);
@@ -175,6 +179,8 @@ export default function App() {
     // Simulate match after delay
     setTimeout(() => {
       setMatchSignalNumber(Math.floor(Math.random() * 99) + 1);
+      setMatchDrinkPrice(drinkPrice);
+      setMatchQuickMode(userQuickMode);
       setHasArrived(false);
       setPartnerArrived(false);
       setScreen('matchSignal');
@@ -194,7 +200,7 @@ export default function App() {
 
   const handleMatchComplete = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (quickMode) {
+    if (matchQuickMode) {
       setTimerSeconds(300);
       setScreen('timer');
     } else {
@@ -243,9 +249,21 @@ export default function App() {
         <View style={styles.signalContent}>
           <Text style={styles.signalLabel}>SIGNAL</Text>
           <Text style={styles.signalNumber}>No. {matchSignalNumber}</Text>
+
+          <View style={styles.signalPriceContainer}>
+            <Text style={styles.signalPriceLabel}>PAYMENT</Text>
+            <Text style={styles.signalPrice}>¥{matchDrinkPrice.toLocaleString()}</Text>
+          </View>
+
           <Text style={styles.signalMeetingLabel}>MEET AT</Text>
           <Text style={styles.signalMeetingPoint}>1F MAIN BAR</Text>
           <Text style={styles.signalMeetingDesc}>1階バーカウンターに集合してください</Text>
+
+          {matchQuickMode && (
+            <View style={styles.quickModeBadge}>
+              <Text style={styles.quickModeBadgeText}>5分限定モード</Text>
+            </View>
+          )}
 
           <View style={styles.arrivalStatus}>
             <View style={styles.arrivalRow}>
@@ -277,8 +295,10 @@ export default function App() {
               </Text>
             </TouchableOpacity>
           )}
+        </View>
 
-          <Text style={styles.signalFooter}>この画面をバーテンダーに見せてください</Text>
+        <View style={styles.signalFooterContainer}>
+          <Text style={styles.signalFooterText}>この画面をバーテンダーに見せてください</Text>
         </View>
       </View>
     );
@@ -424,7 +444,10 @@ export default function App() {
                       style={styles.drinkItem}
                       onPress={() => handleSelectDrink(drink)}
                     >
-                      <Text style={styles.drinkName}>{drink.name}</Text>
+                      <View style={styles.drinkInfo}>
+                        <Text style={styles.drinkName}>{drink.name}</Text>
+                        <Text style={styles.drinkNameJa}>{drink.nameJa}</Text>
+                      </View>
                       <Text style={styles.drinkPrice}>¥{drink.price}</Text>
                     </TouchableOpacity>
                   ))}
@@ -560,21 +583,27 @@ const styles = StyleSheet.create({
 
   // Signal Screen
   signalBorder: { position: 'absolute', top: 20, left: 20, right: 20, bottom: 20, borderWidth: 4, borderColor: Colors.neonLime, borderRadius: 24 },
-  signalContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
+  signalContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   signalLabel: { color: Colors.lightGray, fontSize: 14, letterSpacing: 4 },
-  signalNumber: { color: Colors.white, fontSize: 64, fontWeight: 'bold', marginBottom: 24 },
+  signalNumber: { color: Colors.white, fontSize: 56, fontWeight: 'bold', marginBottom: 16 },
+  signalPriceContainer: { alignItems: 'center', marginBottom: 20 },
+  signalPriceLabel: { color: Colors.lightGray, fontSize: 12, letterSpacing: 2 },
+  signalPrice: { color: Colors.neonLime, fontSize: 32, fontWeight: 'bold' },
   signalMeetingLabel: { color: Colors.neonLime, fontSize: 14, letterSpacing: 2 },
-  signalMeetingPoint: { color: Colors.white, fontSize: 24, fontWeight: 'bold', letterSpacing: 2 },
-  signalMeetingDesc: { color: Colors.lightGray, fontSize: 14, marginTop: 8, marginBottom: 24 },
-  arrivalStatus: { width: '100%', marginBottom: 24 },
-  arrivalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
-  arrivalLabel: { color: Colors.white, fontSize: 16 },
-  arrivalBadge: { color: Colors.lightGray, fontSize: 14, backgroundColor: Colors.darkGray, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
+  signalMeetingPoint: { color: Colors.white, fontSize: 20, fontWeight: 'bold', letterSpacing: 2 },
+  signalMeetingDesc: { color: Colors.lightGray, fontSize: 14, marginTop: 4, marginBottom: 12 },
+  quickModeBadge: { backgroundColor: 'rgba(166, 255, 0, 0.2)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginBottom: 16 },
+  quickModeBadgeText: { color: Colors.neonLime, fontSize: 14, fontWeight: '600' },
+  arrivalStatus: { width: '100%', marginBottom: 16 },
+  arrivalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
+  arrivalLabel: { color: Colors.white, fontSize: 14 },
+  arrivalBadge: { color: Colors.lightGray, fontSize: 12, backgroundColor: Colors.darkGray, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
   arrivalBadgeActive: { color: Colors.background, backgroundColor: Colors.neonLime },
-  signalButton: { backgroundColor: Colors.neonLime, borderRadius: 30, paddingHorizontal: 48, paddingVertical: 18 },
+  signalButton: { backgroundColor: Colors.neonLime, borderRadius: 30, paddingHorizontal: 40, paddingVertical: 16 },
   signalButtonDisabled: { backgroundColor: Colors.darkGray },
-  signalButtonText: { color: Colors.background, fontSize: 18, fontWeight: 'bold' },
-  signalFooter: { color: Colors.lightGray, fontSize: 12, marginTop: 24, textAlign: 'center' },
+  signalButtonText: { color: Colors.background, fontSize: 16, fontWeight: 'bold' },
+  signalFooterContainer: { position: 'absolute', bottom: 50, left: 40, right: 40, backgroundColor: Colors.neonLime, borderRadius: 12, padding: 16 },
+  signalFooterText: { color: Colors.background, fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
 
   // Timer Screen
   timerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -604,6 +633,8 @@ const styles = StyleSheet.create({
   drinkSelectLabel: { color: Colors.lightGray, fontSize: 14, letterSpacing: 2, marginBottom: 16 },
   drinkList: { width: '100%' },
   drinkItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.cardBg, borderRadius: 12, padding: 16, marginBottom: 8, borderWidth: 1, borderColor: Colors.darkGray },
+  drinkInfo: { flex: 1 },
   drinkName: { color: Colors.white, fontSize: 16, fontWeight: '600' },
-  drinkPrice: { color: Colors.neonLime, fontSize: 16, fontWeight: 'bold' },
+  drinkNameJa: { color: Colors.lightGray, fontSize: 12, marginTop: 2 },
+  drinkPrice: { color: Colors.neonLime, fontSize: 18, fontWeight: 'bold' },
 });
