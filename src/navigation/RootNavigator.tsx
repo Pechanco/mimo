@@ -19,7 +19,7 @@ export default function RootNavigator() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: Colors.background },
-        animation: 'fade',
+        animation: 'none',
       }}
     >
       <Stack.Screen name="QRScanner" component={QRScannerScreen} />
