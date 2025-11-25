@@ -53,11 +53,11 @@ const DRINKS = [
   { id: '3', name: 'GIN TONIC', price: 700 },
 ];
 
-const getMoodIcon = (mood: Mood) => {
+const getMoodLabel = (mood: Mood) => {
   switch (mood) {
-    case 'shot': return '🍺';
-    case 'cocktail': return '🍹';
-    case 'champagne': return '🍾';
+    case 'shot': return 'SHOT';
+    case 'cocktail': return 'COCKTAIL';
+    case 'champagne': return 'CHAMPAGNE';
   }
 };
 
@@ -222,7 +222,7 @@ export default function App() {
         <View style={styles.signalContent}>
           <Text style={styles.signalLabel}>SIGNAL</Text>
           <Text style={styles.signalNumber}>No. {matchSignalNumber}</Text>
-          <Text style={styles.signalMeetingLabel}>📍 MEET AT</Text>
+          <Text style={styles.signalMeetingLabel}>MEET AT</Text>
           <Text style={styles.signalMeetingPoint}>1F MAIN BAR</Text>
           <View style={styles.signalAmountContainer}>
             <Text style={styles.signalAmountLabel}>PAYMENT</Text>
@@ -296,6 +296,12 @@ export default function App() {
           <Text style={styles.instructionText}>
             {ticketUsed ? 'バーカウンターでこの画面を見せてください' : 'バーでドリンクを受け取る際にタップしてください'}
           </Text>
+
+          <TouchableOpacity style={styles.onlineIndicator} onPress={() => setTab('floor')}>
+            <View style={styles.onlineDot} />
+            <Text style={styles.onlineText}>{MOCK_WOMEN.length}人がオンライン</Text>
+            <Text style={styles.onlineArrow}>→</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         // Floor Screen (Male View for demo)
@@ -316,13 +322,13 @@ export default function App() {
                 disabled={pendingOffers.includes(item.id)}
               >
                 <View style={styles.userPhoto}>
-                  <Text style={styles.userPhotoText}>👤</Text>
+                  <Text style={styles.userPhotoText}>{item.nickname.charAt(0)}</Text>
                 </View>
                 <Text style={styles.userName}>{item.nickname}</Text>
                 <View style={styles.userTags}>
-                  <Text style={styles.moodTag}>{getMoodIcon(item.mood)}</Text>
+                  <Text style={styles.moodTag}>{getMoodLabel(item.mood)}</Text>
                   <Text style={styles.partyTag}>{getPartySizeLabel(item.party_size)}</Text>
-                  {item.quick_mode && <Text style={styles.quickTag}>⏱️ 5min</Text>}
+                  {item.quick_mode && <Text style={styles.quickTag}>5min</Text>}
                 </View>
                 {pendingOffers.includes(item.id) && (
                   <View style={styles.pendingBadge}>
@@ -337,12 +343,10 @@ export default function App() {
 
       {/* Tab Bar */}
       <View style={styles.tabBar}>
-        <TouchableOpacity style={styles.tab} onPress={() => setTab('ticket')}>
-          <Text style={styles.tabIcon}>🎫</Text>
+        <TouchableOpacity style={[styles.tab, tab === 'ticket' && styles.tabActive]} onPress={() => setTab('ticket')}>
           <Text style={[styles.tabLabel, tab === 'ticket' && styles.tabLabelActive]}>TICKET</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tab} onPress={() => setTab('floor')}>
-          <Text style={styles.tabIcon}>🥂</Text>
+        <TouchableOpacity style={[styles.tab, tab === 'floor' && styles.tabActive]} onPress={() => setTab('floor')}>
           <Text style={[styles.tabLabel, tab === 'floor' && styles.tabLabelActive]}>FLOOR</Text>
         </TouchableOpacity>
       </View>
@@ -351,8 +355,7 @@ export default function App() {
       <Modal visible={showWarningModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.warningModal}>
-            <Text style={styles.warningIcon}>⚠️</Text>
-            <Text style={styles.warningTitle}>WAIT!</Text>
+            <Text style={styles.warningTitle}>WAIT</Text>
             <Text style={styles.warningText}>
               mimoの「CHEERS」は「いいね」ではありません。{'\n\n'}
               「今すぐバーで合流する」という約束です。{'\n\n'}
@@ -412,6 +415,10 @@ const styles = StyleSheet.create({
   useButton: { backgroundColor: Colors.neonLime, borderRadius: 30, paddingHorizontal: 48, paddingVertical: 18, marginTop: 32 },
   useButtonText: { color: Colors.background, fontSize: 18, fontWeight: 'bold' },
   instructionText: { color: Colors.lightGray, fontSize: 14, textAlign: 'center', marginTop: 24 },
+  onlineIndicator: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 40, backgroundColor: Colors.cardBg, paddingHorizontal: 20, paddingVertical: 14, borderRadius: 30, borderWidth: 1, borderColor: Colors.darkGray },
+  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.neonLime, marginRight: 10 },
+  onlineText: { color: Colors.white, fontSize: 14, fontWeight: '500' },
+  onlineArrow: { color: Colors.neonLime, fontSize: 16, fontWeight: 'bold', marginLeft: 10 },
 
   // Floor
   floorContainer: { flex: 1 },
@@ -421,20 +428,20 @@ const styles = StyleSheet.create({
   userGrid: { padding: 10 },
   userCard: { flex: 1, margin: 6, backgroundColor: Colors.cardBg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: Colors.darkGray, maxWidth: '47%' },
   userPhoto: { width: '100%', aspectRatio: 1, backgroundColor: Colors.darkGray, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  userPhotoText: { fontSize: 40 },
+  userPhotoText: { fontSize: 36, fontWeight: 'bold', color: Colors.lightGray },
   userName: { color: Colors.white, fontSize: 16, fontWeight: '600', textAlign: 'center', marginBottom: 4 },
   userTags: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 4 },
-  moodTag: { fontSize: 14 },
+  moodTag: { color: Colors.neonLime, fontSize: 9, fontWeight: '600', backgroundColor: 'rgba(166, 255, 0, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   partyTag: { color: Colors.lightGray, fontSize: 10, backgroundColor: Colors.darkGray, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   quickTag: { color: Colors.neonLime, fontSize: 10, backgroundColor: 'rgba(166, 255, 0, 0.2)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   pendingBadge: { position: 'absolute', top: 8, right: 8, backgroundColor: Colors.neonLime, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
   pendingText: { color: Colors.background, fontSize: 10, fontWeight: 'bold' },
 
   // Tab Bar
-  tabBar: { flexDirection: 'row', backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.darkGray, paddingBottom: 30, paddingTop: 10 },
-  tab: { flex: 1, alignItems: 'center' },
-  tabIcon: { fontSize: 24 },
-  tabLabel: { color: Colors.gray, fontSize: 12, fontWeight: '600', marginTop: 4 },
+  tabBar: { flexDirection: 'row', backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.darkGray, paddingBottom: 30, paddingTop: 0 },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 16 },
+  tabActive: { borderTopWidth: 2, borderTopColor: Colors.neonLime },
+  tabLabel: { color: Colors.gray, fontSize: 14, fontWeight: '600', letterSpacing: 2 },
   tabLabelActive: { color: Colors.neonLime },
 
   // Signal Screen
@@ -460,8 +467,7 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' },
   warningModal: { backgroundColor: Colors.background, margin: 24, borderRadius: 24, padding: 32, alignItems: 'center', borderWidth: 2, borderColor: Colors.neonLime },
-  warningIcon: { fontSize: 48, marginBottom: 16 },
-  warningTitle: { color: Colors.neonLime, fontSize: 32, fontWeight: 'bold', letterSpacing: 4, marginBottom: 24 },
+  warningTitle: { color: Colors.neonLime, fontSize: 32, fontWeight: 'bold', letterSpacing: 4, marginBottom: 24, marginTop: 8 },
   warningText: { color: Colors.white, fontSize: 16, textAlign: 'center', lineHeight: 24 },
   warningButtons: { flexDirection: 'row', gap: 12, marginTop: 32, width: '100%' },
   cancelButton: { flex: 1, backgroundColor: Colors.darkGray, borderRadius: 12, padding: 16, alignItems: 'center' },
