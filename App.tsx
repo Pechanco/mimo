@@ -164,9 +164,11 @@ export default function App() {
   // Match state
   const [matchSignalNumber, setMatchSignalNumber] = useState(77);
   const [matchDrinkPrice, setMatchDrinkPrice] = useState(0);
+  const [matchDrinkDiscount, setMatchDrinkDiscount] = useState(0);
   const [matchQuickMode, setMatchQuickMode] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(300);
   const [timerActive, setTimerActive] = useState(false);
+  const [alarmActive, setAlarmActive] = useState(false);
   const [hasArrived, setHasArrived] = useState(false);
   const [partnerArrived, setPartnerArrived] = useState(false);
 
@@ -184,17 +186,8 @@ export default function App() {
       const interval = setInterval(() => {
         setTimerSeconds(s => {
           if (s <= 1) {
-            // Multiple vibrations for strong feedback
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 300);
-            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 600);
-            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 900);
             setTimerActive(false);
-            Alert.alert(
-              'TIME UP',
-              'お疲れ様でした。\n解散して引き続きお楽しみください。\n\nThank you!\nYou\'re free to go.\nEnjoy the rest of your night!',
-              [{ text: 'OK', onPress: () => { setScreen('main'); setTab('ticket'); } }]
-            );
+            setAlarmActive(true);
             return 0;
           }
           return s - 1;
@@ -203,6 +196,30 @@ export default function App() {
       return () => clearInterval(interval);
     }
   }, [timerActive, timerSeconds]);
+
+  // Alarm effect - continuous vibration until dismissed
+  useEffect(() => {
+    if (alarmActive) {
+      const vibrateInterval = setInterval(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      }, 500);
+
+      Alert.alert(
+        'TIME UP',
+        'お疲れ様でした。\n解散して引き続きお楽しみください。\n\nThank you!\nYou\'re free to go.\nEnjoy the rest of your night!',
+        [{
+          text: 'OK',
+          onPress: () => {
+            setAlarmActive(false);
+            setScreen('main');
+            setTab('ticket');
+          }
+        }]
+      );
+
+      return () => clearInterval(vibrateInterval);
+    }
+  }, [alarmActive]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -245,6 +262,7 @@ export default function App() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const userQuickMode = selectedUser.quick_mode;
     const drinkPrice = selectedDrink.price;
+    const drinkDiscount = selectedDrink.discount;
     setPendingOffers([...pendingOffers, selectedUser.id]);
     setShowOfferWarning(false);
     setSelectedUser(null);
@@ -253,6 +271,7 @@ export default function App() {
     setTimeout(() => {
       setMatchSignalNumber(Math.floor(Math.random() * 99) + 1);
       setMatchDrinkPrice(drinkPrice);
+      setMatchDrinkDiscount(drinkDiscount);
       setMatchQuickMode(userQuickMode);
       setHasArrived(false);
       setPartnerArrived(false);
@@ -327,30 +346,41 @@ export default function App() {
           <Text style={styles.signalLabel}>SIGNAL</Text>
           <Text style={styles.signalNumber}>No. {matchSignalNumber}</Text>
 
+          <View style={styles.signalPairInfo}>
+            <Text style={styles.signalPairText}>このナンバーはペアになっています</Text>
+            <Text style={styles.signalPairText}>見せ合って合流してください</Text>
+            <Text style={styles.signalPairTextEn}>This number is paired with your match.</Text>
+            <Text style={styles.signalPairTextEn}>Show each other to confirm.</Text>
+          </View>
+
           <View style={styles.signalPriceContainer}>
             <Text style={styles.signalPriceLabel}>PAYMENT</Text>
-            <Text style={styles.signalPrice}>¥{matchDrinkPrice.toLocaleString()}</Text>
+            <View style={styles.signalPriceRow}>
+              <Text style={styles.signalPrice}>¥{matchDrinkPrice.toLocaleString()}</Text>
+              <Text style={styles.signalDiscount}>{matchDrinkDiscount}円OFF</Text>
+            </View>
           </View>
 
           <Text style={styles.signalMeetingLabel}>MEET AT</Text>
           <Text style={styles.signalMeetingPoint}>1F MAIN BAR</Text>
           <Text style={styles.signalMeetingDesc}>1階バーカウンターに集合してください</Text>
+          <Text style={styles.signalMeetingDescEn}>Meet at the 1st floor bar counter</Text>
 
           {matchQuickMode && (
             <View style={styles.quickModeBadge}>
-              <Text style={styles.quickModeBadgeText}>5分限定モード</Text>
+              <Text style={styles.quickModeBadgeText}>5分限定モード / 5-MIN MODE</Text>
             </View>
           )}
 
           <View style={styles.arrivalStatus}>
             <View style={styles.arrivalRow}>
-              <Text style={styles.arrivalLabel}>あなた</Text>
+              <Text style={styles.arrivalLabel}>あなた / YOU</Text>
               <Text style={[styles.arrivalBadge, hasArrived && styles.arrivalBadgeActive]}>
                 {hasArrived ? '到着済み' : '移動中'}
               </Text>
             </View>
             <View style={styles.arrivalRow}>
-              <Text style={styles.arrivalLabel}>相手</Text>
+              <Text style={styles.arrivalLabel}>相手 / PARTNER</Text>
               <Text style={[styles.arrivalBadge, partnerArrived && styles.arrivalBadgeActive]}>
                 {partnerArrived ? '到着済み' : '移動中'}
               </Text>
@@ -383,6 +413,7 @@ export default function App() {
             <Text style={styles.signalInstructionLabel}>INSTRUCTION</Text>
             <Text style={styles.signalInstructionText}>この画面をバーテンダーが確認したら</Text>
             <Text style={styles.signalInstructionText}>上のボタンをスライドしてください</Text>
+            <Text style={styles.signalInstructionTextEn}>Slide after the bartender confirms</Text>
           </View>
         )}
       </View>
@@ -452,9 +483,16 @@ export default function App() {
               </>
             )}
           </View>
-          <Text style={styles.instructionText}>
-            {ticketUsed ? 'バーカウンターでこの画面を見せてください' : 'この画面をバーテンダーが確認したらスライドしてください'}
-          </Text>
+          {!ticketUsed && (
+            <>
+              <Text style={styles.instructionText}>
+                この画面をバーテンダーが確認したらスライドしてください
+              </Text>
+              <Text style={styles.instructionTextEn}>
+                Slide after the bartender confirms this screen
+              </Text>
+            </>
+          )}
 
           <TouchableOpacity style={styles.onlineIndicator} onPress={() => setTab('floor')}>
             <View style={styles.onlineDot} />
@@ -655,6 +693,7 @@ const styles = StyleSheet.create({
   useButton: { backgroundColor: Colors.neonLime, borderRadius: 30, paddingHorizontal: 48, paddingVertical: 18, marginTop: 32 },
   useButtonText: { color: Colors.background, fontSize: 18, fontWeight: 'bold' },
   instructionText: { color: Colors.lightGray, fontSize: 14, textAlign: 'center', marginTop: 24 },
+  instructionTextEn: { color: Colors.gray, fontSize: 12, textAlign: 'center', marginTop: 4 },
   onlineIndicator: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 40, backgroundColor: Colors.cardBg, paddingHorizontal: 20, paddingVertical: 14, borderRadius: 30, borderWidth: 1, borderColor: Colors.darkGray },
   onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.neonLime, marginRight: 10 },
   onlineText: { color: Colors.white, fontSize: 14, fontWeight: '500' },
@@ -686,15 +725,21 @@ const styles = StyleSheet.create({
 
   // Signal Screen
   signalBorder: { position: 'absolute', top: 20, left: 20, right: 20, bottom: 20, borderWidth: 4, borderColor: Colors.neonLime, borderRadius: 24 },
-  signalContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  signalLabel: { color: Colors.lightGray, fontSize: 14, letterSpacing: 4 },
-  signalNumber: { color: Colors.white, fontSize: 56, fontWeight: 'bold', marginBottom: 16 },
-  signalPriceContainer: { alignItems: 'center', marginBottom: 20 },
-  signalPriceLabel: { color: Colors.lightGray, fontSize: 12, letterSpacing: 2 },
-  signalPrice: { color: Colors.neonLime, fontSize: 32, fontWeight: 'bold' },
-  signalMeetingLabel: { color: Colors.neonLime, fontSize: 14, letterSpacing: 2 },
-  signalMeetingPoint: { color: Colors.white, fontSize: 20, fontWeight: 'bold', letterSpacing: 2 },
-  signalMeetingDesc: { color: Colors.lightGray, fontSize: 14, marginTop: 4, marginBottom: 12 },
+  signalContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  signalLabel: { color: Colors.lightGray, fontSize: 12, letterSpacing: 4 },
+  signalNumber: { color: Colors.white, fontSize: 48, fontWeight: 'bold', marginBottom: 8 },
+  signalPairInfo: { alignItems: 'center', marginBottom: 16, backgroundColor: 'rgba(255,255,255,0.05)', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12 },
+  signalPairText: { color: Colors.white, fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  signalPairTextEn: { color: Colors.lightGray, fontSize: 11, textAlign: 'center', lineHeight: 18 },
+  signalPriceContainer: { alignItems: 'center', marginBottom: 16 },
+  signalPriceLabel: { color: Colors.lightGray, fontSize: 11, letterSpacing: 2 },
+  signalPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  signalPrice: { color: Colors.neonLime, fontSize: 28, fontWeight: 'bold' },
+  signalDiscount: { color: '#FF6B6B', fontSize: 12, fontWeight: '600' },
+  signalMeetingLabel: { color: Colors.neonLime, fontSize: 12, letterSpacing: 2 },
+  signalMeetingPoint: { color: Colors.white, fontSize: 18, fontWeight: 'bold', letterSpacing: 2 },
+  signalMeetingDesc: { color: Colors.lightGray, fontSize: 12, marginTop: 2 },
+  signalMeetingDescEn: { color: Colors.gray, fontSize: 10, marginBottom: 12 },
   quickModeBadge: { backgroundColor: 'rgba(166, 255, 0, 0.2)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginBottom: 16 },
   quickModeBadgeText: { color: Colors.neonLime, fontSize: 14, fontWeight: '600' },
   arrivalStatus: { width: '100%', marginBottom: 16 },
@@ -713,6 +758,7 @@ const styles = StyleSheet.create({
   signalInstructionContainer: { position: 'absolute', bottom: 40, left: 20, right: 20, alignItems: 'center', backgroundColor: 'rgba(166, 255, 0, 0.1)', paddingVertical: 16, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(166, 255, 0, 0.3)' },
   signalInstructionLabel: { color: Colors.neonLime, fontSize: 10, letterSpacing: 2, marginBottom: 8 },
   signalInstructionText: { color: Colors.white, fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  signalInstructionTextEn: { color: Colors.lightGray, fontSize: 11, textAlign: 'center', marginTop: 4 },
 
   // Timer Screen
   timerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
