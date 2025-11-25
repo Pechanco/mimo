@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -54,7 +54,7 @@ export default function MatchSignalScreen() {
     return () => pulse.stop();
   }, []);
 
-  const panResponder = PanResponder.create({
+  const panResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => !isReceiver && !isCompleted,
     onMoveShouldSetPanResponder: () => !isReceiver && !isCompleted,
     onPanResponderMove: (_, gestureState) => {
@@ -90,7 +90,7 @@ export default function MatchSignalScreen() {
         }).start();
       }
     },
-  });
+  }), [isReceiver, isCompleted, slideAnim, navigation, match, hasQuickMode]);
 
   return (
     <View style={styles.container}>

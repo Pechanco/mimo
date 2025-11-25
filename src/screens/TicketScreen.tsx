@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ const SLIDE_THRESHOLD = SCREEN_WIDTH * 0.6;
 export default function TicketScreen() {
   const [isUsed, setIsUsed] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const slideAnim = new Animated.Value(0);
+  const slideAnim = useRef(new Animated.Value(0)).current;
 
   // Update time every second when ticket is used (anti-screenshot)
   useEffect(() => {
@@ -29,7 +29,7 @@ export default function TicketScreen() {
     }
   }, [isUsed]);
 
-  const panResponder = PanResponder.create({
+  const panResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => !isUsed,
     onMoveShouldSetPanResponder: () => !isUsed,
     onPanResponderMove: (_, gestureState) => {
@@ -53,7 +53,7 @@ export default function TicketScreen() {
         }).start();
       }
     },
-  });
+  }), [isUsed, slideAnim]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('ja-JP', {
