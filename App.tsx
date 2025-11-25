@@ -113,9 +113,9 @@ const MOCK_OFFERS = [
 ];
 
 const DRINKS = [
-  { id: '1', name: 'TEQUILA SHOT', nameJa: 'テキーラショット', price: 560 },
-  { id: '2', name: 'MOJITO', nameJa: 'モヒート', price: 840 },
-  { id: '3', name: 'GIN TONIC', nameJa: 'ジントニック', price: 700 },
+  { id: '1', name: 'TEQUILA SHOT', nameJa: 'テキーラショット', price: 560, originalPrice: 660, discount: 100 },
+  { id: '2', name: 'MOJITO', nameJa: 'モヒート', price: 840, originalPrice: 990, discount: 150 },
+  { id: '3', name: 'GIN TONIC', nameJa: 'ジントニック', price: 700, originalPrice: 800, discount: 100 },
 ];
 
 const getMoodLabel = (mood: Mood) => {
@@ -166,6 +166,7 @@ export default function App() {
   const [matchDrinkPrice, setMatchDrinkPrice] = useState(0);
   const [matchQuickMode, setMatchQuickMode] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(300);
+  const [timerActive, setTimerActive] = useState(false);
   const [hasArrived, setHasArrived] = useState(false);
   const [partnerArrived, setPartnerArrived] = useState(false);
 
@@ -177,9 +178,9 @@ export default function App() {
     }
   }, [ticketUsed]);
 
-  // Timer countdown
+  // Timer countdown - runs globally even when not on timer screen
   useEffect(() => {
-    if (screen === 'timer' && timerSeconds > 0) {
+    if (timerActive && timerSeconds > 0) {
       const interval = setInterval(() => {
         setTimerSeconds(s => {
           if (s <= 1) {
@@ -188,6 +189,7 @@ export default function App() {
             setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 300);
             setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 600);
             setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 900);
+            setTimerActive(false);
             Alert.alert(
               'TIME UP',
               'お疲れ様でした。\n解散して引き続きお楽しみください。\n\nThank you!\nYou\'re free to go.\nEnjoy the rest of your night!',
@@ -200,7 +202,7 @@ export default function App() {
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [screen, timerSeconds]);
+  }, [timerActive, timerSeconds]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -275,6 +277,7 @@ export default function App() {
     setPendingOffers([]);
     if (matchQuickMode) {
       setTimerSeconds(300);
+      setTimerActive(true);
       setScreen('timer');
     } else {
       setScreen('main');
@@ -296,6 +299,7 @@ export default function App() {
             <View style={[styles.qrCorner, styles.qrCornerBL]} />
             <View style={[styles.qrCorner, styles.qrCornerBR]} />
           </View>
+          <Text style={styles.qrInstruction}>mimoカードのQRコードを{'\n'}読み取ってください</Text>
           <TouchableOpacity style={styles.devButton} onPress={handleQRScan}>
             <Text style={styles.devButtonText}>DEV: Skip Scan</Text>
           </TouchableOpacity>
@@ -354,8 +358,9 @@ export default function App() {
           </View>
 
           {!hasArrived ? (
-            <TouchableOpacity style={styles.signalButton} onPress={handleArrive}>
-              <Text style={styles.signalButtonText}>バーに着いた</Text>
+            <TouchableOpacity style={styles.arrivedButton} onPress={handleArrive}>
+              <Text style={styles.arrivedButtonTextEn}>ARRIVED</Text>
+              <Text style={styles.arrivedButtonTextJa}>到着しました</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.slideButtonWrapperSignal}>
@@ -375,8 +380,9 @@ export default function App() {
 
         {hasArrived && (
           <View style={styles.signalInstructionContainer}>
+            <Text style={styles.signalInstructionLabel}>INSTRUCTION</Text>
             <Text style={styles.signalInstructionText}>この画面をバーテンダーが確認したら</Text>
-            <Text style={styles.signalInstructionText}>スライドしてください</Text>
+            <Text style={styles.signalInstructionText}>上のボタンをスライドしてください</Text>
           </View>
         )}
       </View>
@@ -534,7 +540,10 @@ export default function App() {
                         <Text style={styles.drinkName}>{drink.name}</Text>
                         <Text style={styles.drinkNameJa}>{drink.nameJa}</Text>
                       </View>
-                      <Text style={styles.drinkPrice}>¥{drink.price}</Text>
+                      <View style={styles.drinkPriceContainer}>
+                        <Text style={styles.drinkPrice}>¥{drink.price}</Text>
+                        <Text style={styles.drinkDiscount}>{drink.discount}円OFF</Text>
+                      </View>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -551,13 +560,15 @@ export default function App() {
             <Text style={styles.warningTitle}>CONFIRM</Text>
             <Text style={styles.warningText}>
               {selectedUser?.nickname}さんに{'\n'}
-              {selectedDrink?.name}を送ります{'\n\n'}
+              {selectedDrink?.name}の{'\n'}
+              乾杯オファーを送ります{'\n\n'}
               予想支払額: ¥{selectedDrink?.price}{'\n\n'}
               相手がOKしたら、{'\n'}
               バーカウンターへ向かってください。
             </Text>
             <Text style={styles.warningTextEn}>
-              Sending {selectedDrink?.name} to {selectedUser?.nickname}.{'\n'}
+              Sending a CHEERS offer of{'\n'}
+              {selectedDrink?.name} to {selectedUser?.nickname}.{'\n'}
               Estimated: ¥{selectedDrink?.price}{'\n\n'}
               If accepted, please head to the bar counter.
             </Text>
@@ -627,7 +638,8 @@ const styles = StyleSheet.create({
   qrCornerTR: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3 },
   qrCornerBL: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3 },
   qrCornerBR: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3 },
-  devButton: { marginTop: 60, backgroundColor: Colors.darkGray, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  qrInstruction: { color: Colors.lightGray, fontSize: 14, textAlign: 'center', marginTop: 40, lineHeight: 22 },
+  devButton: { marginTop: 40, backgroundColor: Colors.darkGray, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
   devButtonText: { color: Colors.lightGray, fontSize: 12 },
 
   // Ticket
@@ -693,10 +705,14 @@ const styles = StyleSheet.create({
   signalButton: { backgroundColor: Colors.neonLime, borderRadius: 30, paddingHorizontal: 40, paddingVertical: 16 },
   signalButtonDisabled: { backgroundColor: Colors.darkGray },
   signalButtonText: { color: Colors.background, fontSize: 16, fontWeight: 'bold' },
+  arrivedButton: { backgroundColor: Colors.neonLime, borderRadius: 30, paddingHorizontal: 48, paddingVertical: 14, alignItems: 'center' },
+  arrivedButtonTextEn: { color: Colors.background, fontSize: 18, fontWeight: 'bold', letterSpacing: 2 },
+  arrivedButtonTextJa: { color: Colors.background, fontSize: 12, marginTop: 2 },
   signalFooterContainer: { position: 'absolute', bottom: 50, left: 40, right: 40, backgroundColor: Colors.neonLime, borderRadius: 12, padding: 16 },
   signalFooterText: { color: Colors.background, fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
-  signalInstructionContainer: { position: 'absolute', bottom: 50, left: 20, right: 20, alignItems: 'center' },
-  signalInstructionText: { color: Colors.lightGray, fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  signalInstructionContainer: { position: 'absolute', bottom: 40, left: 20, right: 20, alignItems: 'center', backgroundColor: 'rgba(166, 255, 0, 0.1)', paddingVertical: 16, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(166, 255, 0, 0.3)' },
+  signalInstructionLabel: { color: Colors.neonLime, fontSize: 10, letterSpacing: 2, marginBottom: 8 },
+  signalInstructionText: { color: Colors.white, fontSize: 14, textAlign: 'center', lineHeight: 22 },
 
   // Timer Screen
   timerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -742,5 +758,7 @@ const styles = StyleSheet.create({
   drinkInfo: { flex: 1 },
   drinkName: { color: Colors.white, fontSize: 16, fontWeight: '600' },
   drinkNameJa: { color: Colors.lightGray, fontSize: 12, marginTop: 2 },
+  drinkPriceContainer: { alignItems: 'flex-end' },
   drinkPrice: { color: Colors.neonLime, fontSize: 18, fontWeight: 'bold' },
+  drinkDiscount: { color: '#FF6B6B', fontSize: 11, fontWeight: '600', marginTop: 2 },
 });
