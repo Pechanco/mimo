@@ -346,25 +346,20 @@ export default function App() {
           <Text style={styles.signalLabel}>SIGNAL</Text>
           <Text style={styles.signalNumber}>No. {matchSignalNumber}</Text>
 
-          <View style={styles.signalPairInfo}>
-            <Text style={styles.signalPairText}>このナンバーはペアになっています</Text>
-            <Text style={styles.signalPairText}>見せ合って合流してください</Text>
-            <Text style={styles.signalPairTextEn}>This number is paired with your match.</Text>
-            <Text style={styles.signalPairTextEn}>Show each other to confirm.</Text>
-          </View>
-
           <View style={styles.signalPriceContainer}>
             <Text style={styles.signalPriceLabel}>PAYMENT</Text>
             <View style={styles.signalPriceRow}>
-              <Text style={styles.signalPrice}>¥{matchDrinkPrice.toLocaleString()}</Text>
-              <Text style={styles.signalDiscount}>{matchDrinkDiscount}円OFF</Text>
+              <Text style={styles.signalPrice}>¥{(matchDrinkPrice * 2).toLocaleString()}</Text>
+              <Text style={styles.signalDiscount}>{matchDrinkDiscount * 2}円OFF</Text>
             </View>
           </View>
 
-          <Text style={styles.signalMeetingLabel}>MEET AT</Text>
-          <Text style={styles.signalMeetingPoint}>1F MAIN BAR</Text>
-          <Text style={styles.signalMeetingDesc}>1階バーカウンターに集合してください</Text>
-          <Text style={styles.signalMeetingDescEn}>Meet at the 1st floor bar counter</Text>
+          <View style={styles.signalMeetingContainer}>
+            <Text style={styles.signalMeetingLabel}>MEET AT</Text>
+            <Text style={styles.signalMeetingPoint}>1F MAIN BAR</Text>
+            <Text style={styles.signalMeetingDesc}>1階バーカウンターに集合してください</Text>
+            <Text style={styles.signalMeetingDescEn}>Meet at the 1st floor bar counter</Text>
+          </View>
 
           {matchQuickMode && (
             <View style={styles.quickModeBadge}>
@@ -390,7 +385,7 @@ export default function App() {
           {!hasArrived ? (
             <TouchableOpacity style={styles.arrivedButton} onPress={handleArrive}>
               <Text style={styles.arrivedButtonTextEn}>ARRIVED</Text>
-              <Text style={styles.arrivedButtonTextJa}>到着しました</Text>
+              <Text style={styles.arrivedButtonTextJa}>集合場所に到着しました</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.slideButtonWrapperSignal}>
@@ -496,7 +491,7 @@ export default function App() {
 
           <TouchableOpacity style={styles.onlineIndicator} onPress={() => setTab('floor')}>
             <View style={styles.onlineDot} />
-            <Text style={styles.onlineText}>{MOCK_WOMEN.length}人がオンライン</Text>
+            <Text style={styles.onlineText}>現在{MOCK_WOMEN.length}人がオンライン</Text>
             <Text style={styles.onlineArrow}>→</Text>
           </TouchableOpacity>
         </View>
@@ -575,12 +570,15 @@ export default function App() {
                       onPress={() => handleSelectDrink(drink)}
                     >
                       <View style={styles.drinkInfo}>
-                        <Text style={styles.drinkName}>{drink.name}</Text>
+                        <View style={styles.drinkNameRow}>
+                          <Text style={styles.drinkName}>{drink.name}</Text>
+                          <Text style={styles.drinkQuantity}>×2</Text>
+                        </View>
                         <Text style={styles.drinkNameJa}>{drink.nameJa}</Text>
                       </View>
                       <View style={styles.drinkPriceContainer}>
-                        <Text style={styles.drinkPrice}>¥{drink.price}</Text>
-                        <Text style={styles.drinkDiscount}>{drink.discount}円OFF</Text>
+                        <Text style={styles.drinkPrice}>¥{drink.price * 2}</Text>
+                        <Text style={styles.drinkDiscount}>{drink.discount * 2}円OFF</Text>
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -598,16 +596,16 @@ export default function App() {
             <Text style={styles.warningTitle}>CONFIRM</Text>
             <Text style={styles.warningText}>
               {selectedUser?.nickname}さんに{'\n'}
-              {selectedDrink?.name}の{'\n'}
+              {selectedDrink?.name} ×2 の{'\n'}
               乾杯オファーを送ります{'\n\n'}
-              予想支払額: ¥{selectedDrink?.price}{'\n\n'}
+              予想支払額: ¥{selectedDrink ? selectedDrink.price * 2 : 0}{'\n\n'}
               相手がOKしたら、{'\n'}
               バーカウンターへ向かってください。
             </Text>
             <Text style={styles.warningTextEn}>
               Sending a CHEERS offer of{'\n'}
-              {selectedDrink?.name} to {selectedUser?.nickname}.{'\n'}
-              Estimated: ¥{selectedDrink?.price}{'\n\n'}
+              {selectedDrink?.name} ×2 to {selectedUser?.nickname}.{'\n'}
+              Estimated: ¥{selectedDrink ? selectedDrink.price * 2 : 0}{'\n\n'}
               If accepted, please head to the bar counter.
             </Text>
             <View style={styles.warningButtons}>
@@ -701,13 +699,13 @@ const styles = StyleSheet.create({
 
   // Floor
   floorContainer: { flex: 1 },
-  floorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 10 },
+  floorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 10 },
   floorTitle: { color: Colors.white, fontSize: 20, fontWeight: 'bold', letterSpacing: 4 },
   offerCount: { color: Colors.neonLime, fontSize: 12, fontWeight: '600' },
-  userGrid: { padding: 10 },
-  userCard: { flex: 1, margin: 6, backgroundColor: Colors.cardBg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: Colors.darkGray, maxWidth: '47%' },
-  userPhoto: { width: '100%', aspectRatio: 1, backgroundColor: Colors.darkGray, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  userPhotoText: { fontSize: 36, fontWeight: 'bold', color: Colors.lightGray },
+  userGrid: { padding: 8 },
+  userCard: { flex: 1, margin: 4, backgroundColor: Colors.cardBg, borderRadius: 16, padding: 10, borderWidth: 1, borderColor: Colors.darkGray, maxWidth: '48%' },
+  userPhoto: { width: '100%', aspectRatio: 0.85, backgroundColor: Colors.darkGray, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  userPhotoText: { fontSize: 48, fontWeight: 'bold', color: Colors.lightGray },
   userName: { color: Colors.white, fontSize: 16, fontWeight: '600', textAlign: 'center', marginBottom: 4 },
   userTags: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 4 },
   moodTag: { color: Colors.neonLime, fontSize: 9, fontWeight: '600', backgroundColor: 'rgba(166, 255, 0, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
@@ -725,21 +723,19 @@ const styles = StyleSheet.create({
 
   // Signal Screen
   signalBorder: { position: 'absolute', top: 20, left: 20, right: 20, bottom: 20, borderWidth: 4, borderColor: Colors.neonLime, borderRadius: 24 },
-  signalContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  signalLabel: { color: Colors.lightGray, fontSize: 12, letterSpacing: 4 },
-  signalNumber: { color: Colors.white, fontSize: 48, fontWeight: 'bold', marginBottom: 8 },
-  signalPairInfo: { alignItems: 'center', marginBottom: 16, backgroundColor: 'rgba(255,255,255,0.05)', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12 },
-  signalPairText: { color: Colors.white, fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  signalPairTextEn: { color: Colors.lightGray, fontSize: 11, textAlign: 'center', lineHeight: 18 },
-  signalPriceContainer: { alignItems: 'center', marginBottom: 16 },
-  signalPriceLabel: { color: Colors.lightGray, fontSize: 11, letterSpacing: 2 },
-  signalPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  signalPrice: { color: Colors.neonLime, fontSize: 28, fontWeight: 'bold' },
-  signalDiscount: { color: '#FF6B6B', fontSize: 12, fontWeight: '600' },
-  signalMeetingLabel: { color: Colors.neonLime, fontSize: 12, letterSpacing: 2 },
-  signalMeetingPoint: { color: Colors.white, fontSize: 18, fontWeight: 'bold', letterSpacing: 2 },
-  signalMeetingDesc: { color: Colors.lightGray, fontSize: 12, marginTop: 2 },
-  signalMeetingDescEn: { color: Colors.gray, fontSize: 10, marginBottom: 12 },
+  signalContent: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, paddingTop: 60 },
+  signalLabel: { color: Colors.lightGray, fontSize: 14, letterSpacing: 6, marginBottom: 8 },
+  signalNumber: { color: Colors.white, fontSize: 72, fontWeight: 'bold', marginBottom: 24 },
+  signalPriceContainer: { alignItems: 'center', marginBottom: 24, backgroundColor: 'rgba(255,255,255,0.05)', paddingVertical: 16, paddingHorizontal: 32, borderRadius: 16 },
+  signalPriceLabel: { color: Colors.lightGray, fontSize: 12, letterSpacing: 2, marginBottom: 4 },
+  signalPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  signalPrice: { color: Colors.neonLime, fontSize: 36, fontWeight: 'bold' },
+  signalDiscount: { color: '#FF6B6B', fontSize: 14, fontWeight: '600' },
+  signalMeetingContainer: { alignItems: 'center', marginBottom: 20 },
+  signalMeetingLabel: { color: Colors.neonLime, fontSize: 12, letterSpacing: 2, marginBottom: 4 },
+  signalMeetingPoint: { color: Colors.white, fontSize: 20, fontWeight: 'bold', letterSpacing: 2 },
+  signalMeetingDesc: { color: Colors.lightGray, fontSize: 12, marginTop: 4 },
+  signalMeetingDescEn: { color: Colors.gray, fontSize: 10, marginTop: 2 },
   quickModeBadge: { backgroundColor: 'rgba(166, 255, 0, 0.2)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginBottom: 16 },
   quickModeBadgeText: { color: Colors.neonLime, fontSize: 14, fontWeight: '600' },
   arrivalStatus: { width: '100%', marginBottom: 16 },
@@ -802,7 +798,9 @@ const styles = StyleSheet.create({
   drinkList: { width: '100%' },
   drinkItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.cardBg, borderRadius: 12, padding: 16, marginBottom: 8, borderWidth: 1, borderColor: Colors.darkGray },
   drinkInfo: { flex: 1 },
+  drinkNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   drinkName: { color: Colors.white, fontSize: 16, fontWeight: '600' },
+  drinkQuantity: { color: Colors.neonLime, fontSize: 14, fontWeight: 'bold' },
   drinkNameJa: { color: Colors.lightGray, fontSize: 12, marginTop: 2 },
   drinkPriceContainer: { alignItems: 'flex-end' },
   drinkPrice: { color: Colors.neonLime, fontSize: 18, fontWeight: 'bold' },
