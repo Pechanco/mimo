@@ -1,12 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
-  Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
@@ -21,42 +20,27 @@ export default function QRScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [showUnlocked, setShowUnlocked] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
     if (scanned) return;
 
-    // Check if it's a valid mimo QR code
     if (data.startsWith('mimo://venue/') || data.includes('mimo')) {
       setScanned(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      // Show unlock animation
       setShowUnlocked(true);
-      Animated.sequence([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.delay(1500),
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        // Navigate to profile or status input
-        // For demo, go directly to Main tabs
+
+      setTimeout(() => {
         navigation.replace('Main');
-      });
+      }, 2000);
     }
   };
 
   if (!permission) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.text}>カメラの許可を確認中...</Text>
+        <View style={styles.centerContent}>
+          <Text style={styles.text}>カメラの許可を確認中...</Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -87,15 +71,12 @@ export default function QRScannerScreen() {
         }}
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
       >
-        {/* Overlay */}
         <View style={styles.overlay}>
-          {/* Header */}
           <SafeAreaView style={styles.header}>
             <Text style={styles.logo}>mimo</Text>
             <Text style={styles.subtitle}>SCAN QR CODE TO ENTER</Text>
           </SafeAreaView>
 
-          {/* Scanner Frame */}
           <View style={styles.scannerFrame}>
             <View style={[styles.corner, styles.cornerTL]} />
             <View style={[styles.corner, styles.cornerTR]} />
@@ -103,22 +84,19 @@ export default function QRScannerScreen() {
             <View style={[styles.corner, styles.cornerBR]} />
           </View>
 
-          {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>店舗のQRコードをスキャンしてください</Text>
           </View>
         </View>
 
-        {/* Unlock Animation */}
         {showUnlocked && (
-          <Animated.View style={[styles.unlockedOverlay, { opacity: fadeAnim }]}>
+          <View style={styles.unlockedOverlay}>
             <Text style={styles.unlockedIcon}>🔓</Text>
             <Text style={styles.unlockedText}>UNLOCKED</Text>
-          </Animated.View>
+          </View>
         )}
       </CameraView>
 
-      {/* Dev button for testing without camera */}
       <TouchableOpacity
         style={styles.devButton}
         onPress={() => handleBarCodeScanned({ type: 'qr', data: 'mimo://venue/test' })}
@@ -133,6 +111,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   camera: {
     flex: 1,
@@ -202,7 +185,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   unlockedOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: Colors.background,
     justifyContent: 'center',
     alignItems: 'center',
