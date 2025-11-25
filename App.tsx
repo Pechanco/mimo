@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
   View,
@@ -12,9 +12,65 @@ import {
   TextInput,
   Alert,
   Switch,
+  PanResponder,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+
+// Slide Button Component
+const SlideButton = ({ onSlideComplete, text, disabled }: { onSlideComplete: () => void; text: string; disabled?: boolean }) => {
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const [sliderWidth, setSliderWidth] = useState(0);
+  const thumbWidth = 60;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => !disabled,
+      onMoveShouldSetPanResponder: () => !disabled,
+      onPanResponderMove: (_, gestureState) => {
+        if (disabled) return;
+        const newValue = Math.max(0, Math.min(gestureState.dx, sliderWidth - thumbWidth));
+        slideAnim.setValue(newValue);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (disabled) return;
+        if (gestureState.dx > (sliderWidth - thumbWidth) * 0.8) {
+          Animated.timing(slideAnim, {
+            toValue: sliderWidth - thumbWidth,
+            duration: 100,
+            useNativeDriver: false,
+          }).start(() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            onSlideComplete();
+            slideAnim.setValue(0);
+          });
+        } else {
+          Animated.spring(slideAnim, {
+            toValue: 0,
+            useNativeDriver: false,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  return (
+    <View
+      style={[styles.slideButtonContainer, disabled && styles.slideButtonDisabled]}
+      onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
+    >
+      <Text style={styles.slideButtonText}>{text}</Text>
+      <Animated.View
+        style={[styles.slideButtonThumb, { transform: [{ translateX: slideAnim }] }]}
+        {...panResponder.panHandlers}
+      >
+        <Text style={styles.slideButtonArrow}>→</Text>
+      </Animated.View>
+    </View>
+  );
+};
 
 // Types
 type Screen = 'qr' | 'profile' | 'status' | 'main' | 'matchSignal' | 'timer';
@@ -287,15 +343,18 @@ export default function App() {
               <Text style={styles.signalButtonText}>バーに着いた</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity
-              style={[styles.signalButton, !partnerArrived && styles.signalButtonDisabled]}
-              onPress={handleMatchComplete}
-              disabled={!partnerArrived}
-            >
-              <Text style={styles.signalButtonText}>
-                {partnerArrived ? 'スライドして完了' : '相手を待っています...'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.slideButtonWrapperSignal}>
+              {partnerArrived ? (
+                <SlideButton
+                  text="スライドして完了"
+                  onSlideComplete={handleMatchComplete}
+                />
+              ) : (
+                <View style={[styles.slideButtonContainer, styles.slideButtonDisabled]}>
+                  <Text style={styles.slideButtonText}>相手を待っています...</Text>
+                </View>
+              )}
+            </View>
           )}
         </View>
 
@@ -322,6 +381,16 @@ export default function App() {
             </Text>
           </View>
           <Text style={styles.timerLabel}>5分限定モード</Text>
+          <Text style={styles.timerSubLabel}>5-Minute Mode</Text>
+          <TouchableOpacity
+            style={styles.homeButton}
+            onPress={() => {
+              setScreen('main');
+              setTab('ticket');
+            }}
+          >
+            <Text style={styles.homeButtonText}>HOME</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -352,20 +421,17 @@ export default function App() {
               <>
                 <Text style={styles.freeText}>1</Text>
                 <Text style={styles.drinkText}>FREE DRINK</Text>
-                <TouchableOpacity
-                  style={styles.useButton}
-                  onPress={() => {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    setTicketUsed(true);
-                  }}
-                >
-                  <Text style={styles.useButtonText}>タップして使用</Text>
-                </TouchableOpacity>
+                <View style={styles.slideButtonWrapper}>
+                  <SlideButton
+                    text="スライドして使用"
+                    onSlideComplete={() => setTicketUsed(true)}
+                  />
+                </View>
               </>
             )}
           </View>
           <Text style={styles.instructionText}>
-            {ticketUsed ? 'バーカウンターでこの画面を見せてください' : 'この画面をバーテンダーが確認したらタップしてください'}
+            {ticketUsed ? 'バーカウンターでこの画面を見せてください' : 'この画面をバーテンダーが確認したらスライドしてください'}
           </Text>
 
           <TouchableOpacity style={styles.onlineIndicator} onPress={() => setTab('floor')}>
@@ -473,6 +539,11 @@ export default function App() {
               予想支払額: ¥{selectedDrink?.price}{'\n\n'}
               相手がOKしたら、{'\n'}
               バーカウンターへ向かってください。
+            </Text>
+            <Text style={styles.warningTextEn}>
+              Sending {selectedDrink?.name} to {selectedUser?.nickname}.{'\n'}
+              Estimated: ¥{selectedDrink?.price}{'\n\n'}
+              If accepted, please head to the bar counter.
             </Text>
             <View style={styles.warningButtons}>
               <TouchableOpacity
@@ -614,12 +685,25 @@ const styles = StyleSheet.create({
   timerCircle: { width: 250, height: 250, borderRadius: 125, borderWidth: 6, borderColor: Colors.neonLime, justifyContent: 'center', alignItems: 'center' },
   timerText: { color: Colors.neonLime, fontSize: 56, fontWeight: 'bold' },
   timerLabel: { color: Colors.white, fontSize: 18, fontWeight: '600', letterSpacing: 2, marginTop: 40 },
+  timerSubLabel: { color: Colors.lightGray, fontSize: 14, letterSpacing: 2, marginTop: 8 },
+  homeButton: { marginTop: 40, backgroundColor: Colors.darkGray, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 24 },
+  homeButtonText: { color: Colors.white, fontSize: 14, fontWeight: '600', letterSpacing: 2 },
+
+  // Slide Button
+  slideButtonContainer: { width: '100%', height: 56, backgroundColor: Colors.neonLime, borderRadius: 28, justifyContent: 'center', alignItems: 'center', position: 'relative', overflow: 'hidden' },
+  slideButtonDisabled: { backgroundColor: Colors.darkGray },
+  slideButtonText: { color: Colors.background, fontSize: 16, fontWeight: 'bold' },
+  slideButtonThumb: { position: 'absolute', left: 4, top: 4, width: 48, height: 48, backgroundColor: Colors.background, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
+  slideButtonArrow: { color: Colors.neonLime, fontSize: 20, fontWeight: 'bold' },
+  slideButtonWrapper: { width: '100%', marginTop: 32 },
+  slideButtonWrapperSignal: { width: '100%' },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
   warningModal: { backgroundColor: Colors.background, margin: 24, borderRadius: 24, padding: 32, alignItems: 'center', borderWidth: 2, borderColor: Colors.neonLime },
   warningTitle: { color: Colors.neonLime, fontSize: 32, fontWeight: 'bold', letterSpacing: 4, marginBottom: 24, marginTop: 8 },
   warningText: { color: Colors.white, fontSize: 16, textAlign: 'center', lineHeight: 24 },
+  warningTextEn: { color: Colors.lightGray, fontSize: 13, textAlign: 'center', lineHeight: 20, marginTop: 16 },
   warningButtons: { flexDirection: 'row', gap: 12, marginTop: 32, width: '100%' },
   cancelButton: { flex: 1, backgroundColor: Colors.darkGray, borderRadius: 12, padding: 16, alignItems: 'center' },
   cancelButtonText: { color: Colors.white, fontSize: 14, fontWeight: '600' },
