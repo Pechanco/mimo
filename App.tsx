@@ -88,6 +88,9 @@ export default function App() {
 
   // Floor state
   const [selectedUser, setSelectedUser] = useState<typeof MOCK_WOMEN[0] | null>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [selectedDrink, setSelectedDrink] = useState<typeof DRINKS[0] | null>(null);
+  const [showOfferWarning, setShowOfferWarning] = useState(false);
   const [pendingOffers, setPendingOffers] = useState<string[]>([]);
   const [offers, setOffers] = useState(MOCK_OFFERS);
   const [hasSeenWarning, setHasSeenWarning] = useState(false);
@@ -96,6 +99,8 @@ export default function App() {
   // Match state
   const [matchSignalNumber, setMatchSignalNumber] = useState(77);
   const [timerSeconds, setTimerSeconds] = useState(300);
+  const [hasArrived, setHasArrived] = useState(false);
+  const [partnerArrived, setPartnerArrived] = useState(false);
 
   // Update time for used ticket
   useEffect(() => {
@@ -112,7 +117,7 @@ export default function App() {
         setTimerSeconds(s => {
           if (s <= 1) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            Alert.alert('⏰ TIME UP!', '5分が経過しました', [
+            Alert.alert('TIME UP', '5分が経過しました', [
               { text: 'OK', onPress: () => { setScreen('main'); setTab('ticket'); } }
             ]);
             return 0;
@@ -142,31 +147,38 @@ export default function App() {
     setScreen('main');
   };
 
-  const handleSendOffer = (user: typeof MOCK_WOMEN[0]) => {
+  const handleOpenUserModal = (user: typeof MOCK_WOMEN[0]) => {
     if (pendingOffers.length >= 3) {
       Alert.alert('制限', '同時に送信できるオファーは3件までです');
       return;
     }
-    Alert.alert(
-      'CONFIRM OFFER',
-      `送る相手: ${user.nickname}\n内容: ${DRINKS[0].name} x 1\n予想支払額: ¥${DRINKS[0].price}\n\n⚠️ 相手がOKしたら、バーカウンターへ向かってください。`,
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        {
-          text: '送信',
-          onPress: () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            setPendingOffers([...pendingOffers, user.id]);
-            setSelectedUser(null);
-            // Simulate match after delay
-            setTimeout(() => {
-              setMatchSignalNumber(Math.floor(Math.random() * 99) + 1);
-              setScreen('matchSignal');
-            }, 2000);
-          },
-        },
-      ]
-    );
+    if (pendingOffers.includes(user.id)) {
+      return;
+    }
+    setSelectedUser(user);
+    setShowUserModal(true);
+  };
+
+  const handleSelectDrink = (drink: typeof DRINKS[0]) => {
+    setSelectedDrink(drink);
+    setShowUserModal(false);
+    setShowOfferWarning(true);
+  };
+
+  const handleConfirmOffer = () => {
+    if (!selectedUser || !selectedDrink) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setPendingOffers([...pendingOffers, selectedUser.id]);
+    setShowOfferWarning(false);
+    setSelectedUser(null);
+    setSelectedDrink(null);
+    // Simulate match after delay
+    setTimeout(() => {
+      setMatchSignalNumber(Math.floor(Math.random() * 99) + 1);
+      setHasArrived(false);
+      setPartnerArrived(false);
+      setScreen('matchSignal');
+    }, 2000);
   };
 
   const handleAcceptOffer = (offerId: string) => {
@@ -215,6 +227,15 @@ export default function App() {
 
   // Match Signal Screen
   if (screen === 'matchSignal') {
+    const handleArrive = () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setHasArrived(true);
+      // Simulate partner arriving after delay
+      setTimeout(() => {
+        setPartnerArrived(true);
+      }, 3000);
+    };
+
     return (
       <View style={styles.container}>
         <StatusBar style="light" />
@@ -224,14 +245,40 @@ export default function App() {
           <Text style={styles.signalNumber}>No. {matchSignalNumber}</Text>
           <Text style={styles.signalMeetingLabel}>MEET AT</Text>
           <Text style={styles.signalMeetingPoint}>1F MAIN BAR</Text>
-          <View style={styles.signalAmountContainer}>
-            <Text style={styles.signalAmountLabel}>PAYMENT</Text>
-            <Text style={styles.signalAmount}>¥1,400</Text>
-            <Text style={styles.signalDiscount}>30% OFF</Text>
+          <Text style={styles.signalMeetingDesc}>1階バーカウンターに集合してください</Text>
+
+          <View style={styles.arrivalStatus}>
+            <View style={styles.arrivalRow}>
+              <Text style={styles.arrivalLabel}>あなた</Text>
+              <Text style={[styles.arrivalBadge, hasArrived && styles.arrivalBadgeActive]}>
+                {hasArrived ? '到着済み' : '移動中'}
+              </Text>
+            </View>
+            <View style={styles.arrivalRow}>
+              <Text style={styles.arrivalLabel}>相手</Text>
+              <Text style={[styles.arrivalBadge, partnerArrived && styles.arrivalBadgeActive]}>
+                {partnerArrived ? '到着済み' : '移動中'}
+              </Text>
+            </View>
           </View>
-          <TouchableOpacity style={styles.signalButton} onPress={handleMatchComplete}>
-            <Text style={styles.signalButtonText}>タップして完了</Text>
-          </TouchableOpacity>
+
+          {!hasArrived ? (
+            <TouchableOpacity style={styles.signalButton} onPress={handleArrive}>
+              <Text style={styles.signalButtonText}>バーに着いた</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.signalButton, !partnerArrived && styles.signalButtonDisabled]}
+              onPress={handleMatchComplete}
+              disabled={!partnerArrived}
+            >
+              <Text style={styles.signalButtonText}>
+                {partnerArrived ? '完了する' : '相手を待っています...'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <Text style={styles.signalFooter}>この画面をバーテンダーに見せてください</Text>
         </View>
       </View>
     );
@@ -318,7 +365,7 @@ export default function App() {
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.userCard}
-                onPress={() => handleSendOffer(item)}
+                onPress={() => handleOpenUserModal(item)}
                 disabled={pendingOffers.includes(item.id)}
               >
                 <View style={styles.userPhoto}>
@@ -350,6 +397,73 @@ export default function App() {
           <Text style={[styles.tabLabel, tab === 'floor' && styles.tabLabelActive]}>FLOOR</Text>
         </TouchableOpacity>
       </View>
+
+      {/* User Detail Modal */}
+      <Modal visible={showUserModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.userDetailModal}>
+            {selectedUser && (
+              <>
+                <TouchableOpacity style={styles.modalClose} onPress={() => setShowUserModal(false)}>
+                  <Text style={styles.modalCloseText}>×</Text>
+                </TouchableOpacity>
+                <View style={styles.userDetailPhoto}>
+                  <Text style={styles.userDetailPhotoText}>{selectedUser.nickname.charAt(0)}</Text>
+                </View>
+                <Text style={styles.userDetailName}>{selectedUser.nickname}</Text>
+                <View style={styles.userDetailTags}>
+                  <Text style={styles.moodTag}>{getMoodLabel(selectedUser.mood)}</Text>
+                  <Text style={styles.partyTag}>{getPartySizeLabel(selectedUser.party_size)}</Text>
+                  {selectedUser.quick_mode && <Text style={styles.quickTag}>5min</Text>}
+                </View>
+                <Text style={styles.drinkSelectLabel}>ドリンクを選択</Text>
+                <View style={styles.drinkList}>
+                  {DRINKS.map(drink => (
+                    <TouchableOpacity
+                      key={drink.id}
+                      style={styles.drinkItem}
+                      onPress={() => handleSelectDrink(drink)}
+                    >
+                      <Text style={styles.drinkName}>{drink.name}</Text>
+                      <Text style={styles.drinkPrice}>¥{drink.price}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Offer Warning Modal */}
+      <Modal visible={showOfferWarning} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.warningModal}>
+            <Text style={styles.warningTitle}>CONFIRM</Text>
+            <Text style={styles.warningText}>
+              {selectedUser?.nickname}さんに{'\n'}
+              {selectedDrink?.name}を送ります{'\n\n'}
+              予想支払額: ¥{selectedDrink?.price}{'\n\n'}
+              相手がOKしたら、{'\n'}
+              バーカウンターへ向かってください。
+            </Text>
+            <View style={styles.warningButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setShowOfferWarning(false);
+                  setSelectedDrink(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>キャンセル</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmOffer}>
+                <Text style={styles.confirmButtonText}>送信する</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Warning Modal */}
       <Modal visible={showWarningModal} transparent animationType="fade">
@@ -448,15 +562,19 @@ const styles = StyleSheet.create({
   signalBorder: { position: 'absolute', top: 20, left: 20, right: 20, bottom: 20, borderWidth: 4, borderColor: Colors.neonLime, borderRadius: 24 },
   signalContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   signalLabel: { color: Colors.lightGray, fontSize: 14, letterSpacing: 4 },
-  signalNumber: { color: Colors.white, fontSize: 64, fontWeight: 'bold', marginBottom: 40 },
+  signalNumber: { color: Colors.white, fontSize: 64, fontWeight: 'bold', marginBottom: 24 },
   signalMeetingLabel: { color: Colors.neonLime, fontSize: 14, letterSpacing: 2 },
-  signalMeetingPoint: { color: Colors.white, fontSize: 24, fontWeight: 'bold', letterSpacing: 2, marginBottom: 40 },
-  signalAmountContainer: { alignItems: 'center', marginBottom: 40 },
-  signalAmountLabel: { color: Colors.lightGray, fontSize: 12, letterSpacing: 2 },
-  signalAmount: { color: Colors.neonLime, fontSize: 40, fontWeight: 'bold' },
-  signalDiscount: { color: Colors.neonLime, fontSize: 14, marginTop: 4 },
+  signalMeetingPoint: { color: Colors.white, fontSize: 24, fontWeight: 'bold', letterSpacing: 2 },
+  signalMeetingDesc: { color: Colors.lightGray, fontSize: 14, marginTop: 8, marginBottom: 24 },
+  arrivalStatus: { width: '100%', marginBottom: 24 },
+  arrivalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  arrivalLabel: { color: Colors.white, fontSize: 16 },
+  arrivalBadge: { color: Colors.lightGray, fontSize: 14, backgroundColor: Colors.darkGray, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
+  arrivalBadgeActive: { color: Colors.background, backgroundColor: Colors.neonLime },
   signalButton: { backgroundColor: Colors.neonLime, borderRadius: 30, paddingHorizontal: 48, paddingVertical: 18 },
+  signalButtonDisabled: { backgroundColor: Colors.darkGray },
   signalButtonText: { color: Colors.background, fontSize: 18, fontWeight: 'bold' },
+  signalFooter: { color: Colors.lightGray, fontSize: 12, marginTop: 24, textAlign: 'center' },
 
   // Timer Screen
   timerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -465,7 +583,7 @@ const styles = StyleSheet.create({
   timerLabel: { color: Colors.white, fontSize: 18, fontWeight: '600', letterSpacing: 2, marginTop: 40 },
 
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
   warningModal: { backgroundColor: Colors.background, margin: 24, borderRadius: 24, padding: 32, alignItems: 'center', borderWidth: 2, borderColor: Colors.neonLime },
   warningTitle: { color: Colors.neonLime, fontSize: 32, fontWeight: 'bold', letterSpacing: 4, marginBottom: 24, marginTop: 8 },
   warningText: { color: Colors.white, fontSize: 16, textAlign: 'center', lineHeight: 24 },
@@ -474,4 +592,18 @@ const styles = StyleSheet.create({
   cancelButtonText: { color: Colors.white, fontSize: 14, fontWeight: '600' },
   confirmButton: { flex: 1, backgroundColor: Colors.neonLime, borderRadius: 12, padding: 16, alignItems: 'center' },
   confirmButtonText: { color: Colors.background, fontSize: 14, fontWeight: 'bold' },
+
+  // User Detail Modal
+  userDetailModal: { backgroundColor: Colors.background, margin: 24, borderRadius: 24, padding: 24, alignItems: 'center', borderWidth: 2, borderColor: Colors.neonLime, width: '85%' },
+  modalClose: { position: 'absolute', top: 16, right: 16, width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
+  modalCloseText: { color: Colors.lightGray, fontSize: 24 },
+  userDetailPhoto: { width: 120, height: 120, borderRadius: 60, backgroundColor: Colors.darkGray, justifyContent: 'center', alignItems: 'center', marginTop: 16, marginBottom: 16 },
+  userDetailPhotoText: { fontSize: 48, fontWeight: 'bold', color: Colors.lightGray },
+  userDetailName: { color: Colors.white, fontSize: 24, fontWeight: 'bold', marginBottom: 12 },
+  userDetailTags: { flexDirection: 'row', gap: 8, marginBottom: 24 },
+  drinkSelectLabel: { color: Colors.lightGray, fontSize: 14, letterSpacing: 2, marginBottom: 16 },
+  drinkList: { width: '100%' },
+  drinkItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.cardBg, borderRadius: 12, padding: 16, marginBottom: 8, borderWidth: 1, borderColor: Colors.darkGray },
+  drinkName: { color: Colors.white, fontSize: 16, fontWeight: '600' },
+  drinkPrice: { color: Colors.neonLime, fontSize: 16, fontWeight: 'bold' },
 });
