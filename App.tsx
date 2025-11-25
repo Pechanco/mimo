@@ -22,13 +22,20 @@ import * as ImagePicker from 'expo-image-picker';
 // Slide Button Component
 const SlideButton = ({ onSlideComplete, text, disabled }: { onSlideComplete: () => void; text: string; disabled?: boolean }) => {
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const [sliderWidth, setSliderWidth] = useState(0);
-  const thumbWidth = 60;
+  const [sliderWidth, setSliderWidth] = useState(280);
+  const thumbWidth = 56;
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => !disabled,
-      onMoveShouldSetPanResponder: () => !disabled,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only respond to horizontal movements
+        return !disabled && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
+      onPanResponderGrant: () => {
+        // Haptic feedback when starting to drag
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      },
       onPanResponderMove: (_, gestureState) => {
         if (disabled) return;
         const newValue = Math.max(0, Math.min(gestureState.dx, sliderWidth - thumbWidth));
@@ -36,7 +43,8 @@ const SlideButton = ({ onSlideComplete, text, disabled }: { onSlideComplete: () 
       },
       onPanResponderRelease: (_, gestureState) => {
         if (disabled) return;
-        if (gestureState.dx > (sliderWidth - thumbWidth) * 0.8) {
+        // Lower threshold (0.6) for easier completion
+        if (gestureState.dx > (sliderWidth - thumbWidth) * 0.6) {
           Animated.timing(slideAnim, {
             toValue: sliderWidth - thumbWidth,
             duration: 100,
@@ -44,11 +52,12 @@ const SlideButton = ({ onSlideComplete, text, disabled }: { onSlideComplete: () 
           }).start(() => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onSlideComplete();
-            slideAnim.setValue(0);
+            setTimeout(() => slideAnim.setValue(0), 300);
           });
         } else {
           Animated.spring(slideAnim, {
             toValue: 0,
+            friction: 5,
             useNativeDriver: false,
           }).start();
         }
@@ -61,7 +70,7 @@ const SlideButton = ({ onSlideComplete, text, disabled }: { onSlideComplete: () 
       style={[styles.slideButtonContainer, disabled && styles.slideButtonDisabled]}
       onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
     >
-      <Text style={styles.slideButtonText}>{text}</Text>
+      <Text style={styles.slideButtonText}>{text} →→</Text>
       <Animated.View
         style={[styles.slideButtonThumb, { transform: [{ translateX: slideAnim }] }]}
         {...panResponder.panHandlers}
@@ -174,7 +183,11 @@ export default function App() {
       const interval = setInterval(() => {
         setTimerSeconds(s => {
           if (s <= 1) {
+            // Multiple vibrations for strong feedback
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 300);
+            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 600);
+            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 900);
             Alert.alert(
               'TIME UP',
               'お疲れ様でした。\n解散して引き続きお楽しみください。\n\nThank you!\nYou\'re free to go.\nEnjoy the rest of your night!',
@@ -258,6 +271,8 @@ export default function App() {
 
   const handleMatchComplete = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Clear pending offers after match completion
+    setPendingOffers([]);
     if (matchQuickMode) {
       setTimerSeconds(300);
       setScreen('timer');
@@ -359,8 +374,9 @@ export default function App() {
         </View>
 
         {hasArrived && (
-          <View style={styles.signalFooterContainer}>
-            <Text style={styles.signalFooterText}>この画面をバーテンダーが確認したらスライドしてください</Text>
+          <View style={styles.signalInstructionContainer}>
+            <Text style={styles.signalInstructionText}>この画面をバーテンダーが確認したら</Text>
+            <Text style={styles.signalInstructionText}>スライドしてください</Text>
           </View>
         )}
       </View>
@@ -679,6 +695,8 @@ const styles = StyleSheet.create({
   signalButtonText: { color: Colors.background, fontSize: 16, fontWeight: 'bold' },
   signalFooterContainer: { position: 'absolute', bottom: 50, left: 40, right: 40, backgroundColor: Colors.neonLime, borderRadius: 12, padding: 16 },
   signalFooterText: { color: Colors.background, fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
+  signalInstructionContainer: { position: 'absolute', bottom: 50, left: 20, right: 20, alignItems: 'center' },
+  signalInstructionText: { color: Colors.lightGray, fontSize: 14, textAlign: 'center', lineHeight: 22 },
 
   // Timer Screen
   timerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
