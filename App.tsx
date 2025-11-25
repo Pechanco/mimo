@@ -119,9 +119,11 @@ export default function App() {
         setTimerSeconds(s => {
           if (s <= 1) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            Alert.alert('TIME UP', '5分が経過しました', [
-              { text: 'OK', onPress: () => { setScreen('main'); setTab('ticket'); } }
-            ]);
+            Alert.alert(
+              'TIME UP',
+              'お疲れ様でした。\n解散して引き続きお楽しみください。\n\nThank you!\nYou\'re free to go.\nEnjoy the rest of your night!',
+              [{ text: 'OK', onPress: () => { setScreen('main'); setTab('ticket'); } }]
+            );
             return 0;
           }
           return s - 1;
@@ -291,15 +293,17 @@ export default function App() {
               disabled={!partnerArrived}
             >
               <Text style={styles.signalButtonText}>
-                {partnerArrived ? '完了する' : '相手を待っています...'}
+                {partnerArrived ? 'スライドして完了' : '相手を待っています...'}
               </Text>
             </TouchableOpacity>
           )}
         </View>
 
-        <View style={styles.signalFooterContainer}>
-          <Text style={styles.signalFooterText}>この画面をバーテンダーに見せてください</Text>
-        </View>
+        {hasArrived && (
+          <View style={styles.signalFooterContainer}>
+            <Text style={styles.signalFooterText}>この画面をバーテンダーが確認したらスライドしてください</Text>
+          </View>
+        )}
       </View>
     );
   }
@@ -361,7 +365,7 @@ export default function App() {
             )}
           </View>
           <Text style={styles.instructionText}>
-            {ticketUsed ? 'バーカウンターでこの画面を見せてください' : 'バーでドリンクを受け取る際にタップしてください'}
+            {ticketUsed ? 'バーカウンターでこの画面を見せてください' : 'この画面をバーテンダーが確認したらタップしてください'}
           </Text>
 
           <TouchableOpacity style={styles.onlineIndicator} onPress={() => setTab('floor')}>
