@@ -5,174 +5,145 @@ This file provides guidance for AI assistants (like Claude) working on the mimo 
 ## Project Overview
 
 **Repository:** Pechanco/mimo
-**Status:** New repository (initial setup)
+**Type:** React Native Mobile Application
+**Framework:** Expo SDK 54
+**Language:** TypeScript
 
-> **Note:** This is a newly initialized repository. Update this section as the project evolves with:
-> - Project purpose and goals
-> - Target users/audience
-> - Key features and capabilities
+> **Note:** 要件定義が共有され次第、このセクションを更新してください。
+
+## Tech Stack
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| Expo | ~54.0.25 | React Native開発フレームワーク |
+| React | 19.1.0 | UIライブラリ |
+| React Native | 0.81.5 | モバイルアプリフレームワーク |
+| TypeScript | ~5.9.2 | 型安全な開発 |
 
 ## Repository Structure
 
 ```
 mimo/
-├── CLAUDE.md          # This file - AI assistant guidance
-├── README.md          # Project documentation (to be created)
-├── src/               # Source code (to be created)
-├── tests/             # Test files (to be created)
-├── docs/              # Documentation (to be created)
-└── .github/           # GitHub workflows (to be created)
+├── App.tsx            # メインアプリコンポーネント
+├── app.json           # Expo設定
+├── index.ts           # エントリーポイント
+├── tsconfig.json      # TypeScript設定
+├── package.json       # 依存関係
+├── assets/            # 画像・アイコン
+│   ├── adaptive-icon.png
+│   ├── favicon.png
+│   ├── icon.png
+│   └── splash-icon.png
+└── CLAUDE.md          # このファイル
 ```
 
-> Update this structure diagram as the codebase grows.
+## Development Commands
 
-## Development Workflow
+```bash
+# 依存関係のインストール
+npm install
 
-### Branch Naming Convention
+# 開発サーバー起動
+npm start
 
-- Feature branches: `feature/<description>`
-- Bug fixes: `fix/<description>`
-- Documentation: `docs/<description>`
-- Claude AI branches: `claude/<session-id>`
-
-### Commit Message Format
-
-Use clear, descriptive commit messages:
+# プラットフォーム別起動
+npm run android    # Android
+npm run ios        # iOS (macOS必要)
+npm run web        # Web
 ```
-<type>: <short description>
-
-[optional body with more details]
-```
-
-Types:
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `refactor`: Code refactoring
-- `test`: Adding or updating tests
-- `chore`: Maintenance tasks
-
-### Pull Request Process
-
-1. Create a feature branch from main
-2. Make changes and commit with clear messages
-3. Push to remote and create a PR
-4. Ensure all tests pass
-5. Request review if needed
-6. Merge after approval
 
 ## Code Conventions
 
-### General Guidelines
+### ファイル命名規則
 
-- Write clear, self-documenting code
-- Keep functions small and focused (single responsibility)
-- Use meaningful variable and function names
-- Add comments only for complex logic, not obvious code
-- Follow the DRY principle (Don't Repeat Yourself)
+- コンポーネント: `PascalCase.tsx` (例: `HomeScreen.tsx`)
+- ユーティリティ: `camelCase.ts` (例: `apiClient.ts`)
+- 型定義: `types.ts` または `*.types.ts`
+- スタイル: コンポーネント内に `StyleSheet.create()` で定義
 
-### File Organization
+### ディレクトリ構成 (推奨)
 
-- Group related functionality together
-- Keep files focused and not too large
-- Use consistent naming conventions for files
-
-## Testing Guidelines
-
-- Write tests for new functionality
-- Maintain good test coverage
-- Run tests before committing
-- Test edge cases and error conditions
-
-## Common Tasks
-
-### Initial Setup
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd mimo
-
-# Install dependencies (update as needed)
-# npm install / pip install -r requirements.txt / etc.
+```
+src/
+├── components/     # 再利用可能なコンポーネント
+├── screens/        # 画面コンポーネント
+├── navigation/     # ナビゲーション設定
+├── hooks/          # カスタムフック
+├── services/       # API・外部サービス
+├── utils/          # ユーティリティ関数
+├── types/          # 型定義
+└── constants/      # 定数
 ```
 
-### Running Tests
+### コーディングスタイル
 
-```bash
-# Add test commands here as they are configured
-```
-
-### Building/Running
-
-```bash
-# Add build/run commands here as they are configured
-```
+- 関数コンポーネントを使用
+- React Hooksを活用
+- 型定義を必ず付ける
+- スタイルは `StyleSheet.create()` を使用
 
 ## AI Assistant Guidelines
 
-### When Working on This Repository
+### Expo/React Native開発時の注意
 
-1. **Read First**: Always read existing code before making changes
-2. **Minimal Changes**: Make only the changes requested; avoid over-engineering
-3. **Preserve Style**: Match existing code style and conventions
-4. **Test Impact**: Consider how changes affect existing functionality
-5. **Document Changes**: Update documentation when adding features
+1. **プラットフォーム差異**: iOS/Androidの違いを考慮
+2. **Expoの制約**: Expo Goで動作しないネイティブモジュールに注意
+3. **パフォーマンス**: 不要な再レンダリングを避ける
+4. **型安全**: TypeScriptの型を適切に定義
 
-### Do Not
+### よく使うExpoパッケージ
 
-- Add unnecessary dependencies
-- Create files that aren't needed
-- Make changes beyond the scope of the request
-- Skip reading relevant existing code
-- Introduce security vulnerabilities
+```bash
+# ナビゲーション
+npx expo install @react-navigation/native @react-navigation/stack
 
-### File Handling
+# 安全なエリア
+npx expo install react-native-safe-area-context
 
-- Prefer editing existing files over creating new ones
-- Delete unused code completely (no commented-out code)
-- Keep files focused on their purpose
+# アイコン
+npx expo install @expo/vector-icons
 
-### Security Considerations
+# ストレージ
+npx expo install @react-native-async-storage/async-storage
+```
 
-- Never commit secrets or credentials
-- Validate user input at system boundaries
-- Follow OWASP guidelines for web applications
-- Use parameterized queries for database access
+### インストール時の注意
+
+- `npm install` ではなく `npx expo install` を使用
+- Expo SDKと互換性のあるバージョンが自動選択される
 
 ## Environment Variables
 
-Document environment variables as they are added:
+Expoでの環境変数設定:
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| _TBD_    | _TBD_       | _TBD_    |
+```bash
+# .env ファイル (git管理外)
+EXPO_PUBLIC_API_URL=https://api.example.com
+```
 
-## Dependencies
-
-List major dependencies as they are added:
-
-| Package | Purpose | Version |
-|---------|---------|---------|
-| _TBD_   | _TBD_   | _TBD_   |
+```typescript
+// コード内での使用
+const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+```
 
 ## Troubleshooting
 
-Document common issues and solutions as they arise:
+### Metro bundlerのキャッシュクリア
 
-### Issue: _Template_
+```bash
+npx expo start --clear
+```
 
-**Symptoms:** _Description_
-**Solution:** _Steps to resolve_
+### node_modulesの再インストール
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
 
 ---
 
 ## Changelog
 
-Track significant updates to this CLAUDE.md file:
-
-- **2025-11-25**: Initial creation of CLAUDE.md for new repository
-
----
-
-> **Maintenance Note:** Keep this file updated as the project evolves. Add specific commands, conventions, and guidelines as they are established.
+- **2025-11-25**: Expoプロジェクト用にCLAUDE.mdを更新
+- **2025-11-25**: 初期作成
