@@ -9,13 +9,19 @@ import {
   Modal,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors } from '../constants/colors';
-import { FloorUser, Offer, Mood, PartySize } from '../types';
+import { FloorUser, Offer, Mood, PartySize, RootStackParamList } from '../types';
+import { getDrinks, getVenue, DrinkItem } from '../services/database';
 
-// Mock data for development
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+// Fallback mock data (used when DB is not available)
 const MOCK_WOMEN: FloorUser[] = [
   { id: '1', nickname: 'Mika', photo_url: null, mood: 'cocktail', party_size: 'duo', quick_mode: true, age: 24 },
   { id: '2', nickname: 'Yuki', photo_url: null, mood: 'champagne', party_size: 'solo', quick_mode: false, age: 22 },
@@ -42,14 +48,14 @@ const MOCK_OFFERS: Offer[] = [
   },
 ];
 
-const DRINKS = [
-  { id: '1', name: 'TEQUILA SHOT', price: 800, discount_price: 560 },
-  { id: '2', name: 'MOJITO', price: 1200, discount_price: 840 },
-  { id: '3', name: 'GIN TONIC', price: 1000, discount_price: 700 },
-  { id: '4', name: 'CHAMPAGNE', price: 5000, discount_price: 3500 },
+// Fallback drinks (used when DB is not available)
+const FALLBACK_DRINKS = [
+  { id: '1', name: 'TEQUILA SHOT', name_ja: 'テキーラショット', price: 660, discount_price: 560, discount_amount: 100, venue_id: 'club_nagoya', is_active: true },
+  { id: '2', name: 'MOJITO', name_ja: 'モヒート', price: 990, discount_price: 840, discount_amount: 150, venue_id: 'club_nagoya', is_active: true },
+  { id: '3', name: 'GIN TONIC', name_ja: 'ジントニック', price: 800, discount_price: 700, discount_amount: 100, venue_id: 'club_nagoya', is_active: true },
 ];
 
-const MEETING_POINTS = ['1F MAIN BAR', '2F LOUNGE', 'VIP AREA'];
+const FALLBACK_MEETING_POINTS = ['1F MAIN BAR', '2F LOUNGE', 'VIP AREA'];
 
 const getMoodIcon = (mood: Mood): string => {
   switch (mood) {
@@ -68,38 +74,55 @@ const getPartySizeLabel = (size: PartySize): string => {
 };
 
 // Male view component (Catalog)
-function MaleFloorView({ onMatch }: { onMatch: () => void }) {
+function MaleFloorView({ onMatch, drinks, meetingPoints }: { onMatch: (quickMode: boolean) => void; drinks: DrinkItem[]; meetingPoints: string[] }) {
   const [selectedUser, setSelectedUser] = useState<FloorUser | null>(null);
-  const [selectedDrink, setSelectedDrink] = useState(DRINKS[0]);
-  const [quantity, setQuantity] = useState(1);
-  const [meetingPoint, setMeetingPoint] = useState(MEETING_POINTS[0]);
+  const [selectedDrink, setSelectedDrink] = useState<DrinkItem | null>(drinks[0] || null);
+  const [quantity, setQuantity] = useState(2); // Default to pair (×2)
+  const [meetingPoint, setMeetingPoint] = useState(meetingPoints[0] || '1F MAIN BAR');
   const [pendingOffers, setPendingOffers] = useState<string[]>([]);
+
+  // Update selectedDrink when drinks load
+  useEffect(() => {
+    if (drinks.length > 0 && !selectedDrink) {
+      setSelectedDrink(drinks[0]);
+    }
+  }, [drinks]);
 
   const handleSendOffer = () => {
     if (pendingOffers.length >= 3) {
-      Alert.alert('制限', '同時に送信できるオファーは3件までです');
+      Alert.alert('制限 / LIMIT', '同時に送信できるオファーは3件までです\nMax 3 pending offers allowed');
       return;
     }
+    if (!selectedDrink || !selectedUser) return;
+
+    const totalPrice = selectedDrink.discount_price * quantity;
+    const totalDiscount = selectedDrink.discount_amount * quantity;
 
     Alert.alert(
       'CONFIRM OFFER',
-      `送る相手: ${selectedUser?.nickname} (${getPartySizeLabel(selectedUser?.party_size || 'solo')})\n` +
-      `内容: ${selectedDrink.name} x ${quantity}\n` +
-      `予想支払額: ¥${(selectedDrink.discount_price * quantity).toLocaleString()} (現地払い)\n\n` +
-      '⚠️ ATTENTION\n' +
+      `送る相手: ${selectedUser.nickname} (${getPartySizeLabel(selectedUser.party_size)})\n` +
+      `内容: ${selectedDrink.name} ×${quantity}\n` +
+      `予想支払額: ¥${totalPrice.toLocaleString()} (${totalDiscount}円OFF)\n\n` +
+      'ATTENTION\n' +
       '1. これは「合流の招待状」です。\n' +
-      '2. 相手がOKしたら、必ずバーカウンターへ向かってください。\n' +
-      '3. お支払いは合流後にバーで行います。',
+      '2. 相手がOKしたら、バーカウンターへ向かってください。\n' +
+      '3. お支払いは合流後にバーで行います。\n\n' +
+      'This is an invitation to meet at the bar.\nPay at the counter after matching.',
       [
         { text: 'キャンセル', style: 'cancel' },
         {
-          text: '規約に同意して送信',
+          text: '送信する / SEND',
           onPress: () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            setPendingOffers([...pendingOffers, selectedUser!.id]);
+            // Maximum vibration for match (important in loud clubs)
+            for (let i = 0; i < 15; i++) {
+              setTimeout(() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+              }, i * 200);
+            }
+            setPendingOffers([...pendingOffers, selectedUser.id]);
             setSelectedUser(null);
-            // In real app, this would trigger match after acceptance
-            setTimeout(onMatch, 2000);
+            // Simulate match after delay (in real app, wait for acceptance)
+            setTimeout(() => onMatch(selectedUser.quick_mode), 2000);
           },
         },
       ]
@@ -162,24 +185,30 @@ function MaleFloorView({ onMatch }: { onMatch: () => void }) {
             <ScrollView style={styles.modalScroll}>
               {/* Drink Selection */}
               <Text style={styles.sectionLabel}>DRINK</Text>
-              {DRINKS.map((drink) => (
+              {drinks.map((drink) => (
                 <TouchableOpacity
                   key={drink.id}
                   style={[
                     styles.optionButton,
-                    selectedDrink.id === drink.id && styles.optionButtonActive,
+                    selectedDrink?.id === drink.id && styles.optionButtonActive,
                   ]}
                   onPress={() => setSelectedDrink(drink)}
                 >
-                  <Text style={styles.optionText}>{drink.name}</Text>
-                  <Text style={styles.priceText}>¥{drink.discount_price}</Text>
+                  <View>
+                    <Text style={styles.optionText}>{drink.name} ×{quantity}</Text>
+                    <Text style={styles.optionSubtext}>{drink.name_ja}</Text>
+                  </View>
+                  <View style={styles.priceContainer}>
+                    <Text style={styles.priceText}>¥{drink.discount_price * quantity}</Text>
+                    <Text style={styles.discountText}>{drink.discount_amount * quantity}円OFF</Text>
+                  </View>
                 </TouchableOpacity>
               ))}
 
               {/* Quantity */}
-              <Text style={styles.sectionLabel}>QUANTITY</Text>
+              <Text style={styles.sectionLabel}>QUANTITY (×2 = PAIR)</Text>
               <View style={styles.quantityRow}>
-                {[1, 2, 3, 4].map((q) => (
+                {[2, 4, 6].map((q) => (
                   <TouchableOpacity
                     key={q}
                     style={[
@@ -188,14 +217,14 @@ function MaleFloorView({ onMatch }: { onMatch: () => void }) {
                     ]}
                     onPress={() => setQuantity(q)}
                   >
-                    <Text style={styles.quantityText}>{q}</Text>
+                    <Text style={styles.quantityText}>×{q}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Meeting Point */}
               <Text style={styles.sectionLabel}>MEETING POINT</Text>
-              {MEETING_POINTS.map((point) => (
+              {meetingPoints.map((point) => (
                 <TouchableOpacity
                   key={point}
                   style={[
@@ -204,16 +233,21 @@ function MaleFloorView({ onMatch }: { onMatch: () => void }) {
                   ]}
                   onPress={() => setMeetingPoint(point)}
                 >
-                  <Text style={styles.optionText}>📍 {point}</Text>
+                  <Text style={styles.optionText}>{point}</Text>
                 </TouchableOpacity>
               ))}
 
               {/* Total */}
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>予想支払額</Text>
-                <Text style={styles.totalAmount}>
-                  ¥{(selectedDrink.discount_price * quantity).toLocaleString()}
-                </Text>
+                <Text style={styles.totalLabel}>予想支払額 / TOTAL</Text>
+                <View style={styles.totalPriceContainer}>
+                  <Text style={styles.totalAmount}>
+                    ¥{selectedDrink ? (selectedDrink.discount_price * quantity).toLocaleString() : 0}
+                  </Text>
+                  {selectedDrink && (
+                    <Text style={styles.totalDiscount}>{selectedDrink.discount_amount * quantity}円OFF</Text>
+                  )}
+                </View>
               </View>
             </ScrollView>
 
@@ -352,17 +386,67 @@ function FemaleFloorView({ onMatch }: { onMatch: () => void }) {
 
 // Main Floor Screen
 export default function FloorScreen() {
+  const navigation = useNavigation<NavigationProp>();
   // In real app, this would come from user context/state
   const [userGender] = useState<'male' | 'female'>('male');
-  const [showMatchSignal, setShowMatchSignal] = useState(false);
+  const [drinks, setDrinks] = useState<DrinkItem[]>(FALLBACK_DRINKS);
+  const [meetingPoints, setMeetingPoints] = useState<string[]>(FALLBACK_MEETING_POINTS);
+  const [loading, setLoading] = useState(true);
 
-  const handleMatch = () => {
+  // Load drinks and venue data from Supabase
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Try to load drinks from Supabase
+        const dbDrinks = await getDrinks('club_nagoya');
+        if (dbDrinks.length > 0) {
+          setDrinks(dbDrinks);
+        }
+
+        // Try to load venue for meeting points
+        const venue = await getVenue('club_nagoya');
+        if (venue && venue.meeting_points) {
+          setMeetingPoints(venue.meeting_points);
+        }
+      } catch (error) {
+        console.log('Using fallback data (DB not available)');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const handleMatch = (quickMode: boolean) => {
     // Navigate to match signal screen
-    setShowMatchSignal(true);
+    navigation.navigate('MatchSignal', {
+      match: {
+        id: 'demo',
+        sender_id: 'demo',
+        receiver_id: 'demo',
+        venue_id: 'club_nagoya',
+        item: drinks[0]?.name || 'TEQUILA SHOT',
+        quantity: 2,
+        meeting_point: meetingPoints[0] || '1F MAIN BAR',
+        status: 'accepted',
+        signal_number: Math.floor(Math.random() * 99) + 1,
+      },
+      isReceiver: false,
+    });
   };
 
+  if (loading) {
+    return (
+      <View style={[styles.floorContainer, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={Colors.neonLime} />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
   if (userGender === 'male') {
-    return <MaleFloorView onMatch={handleMatch} />;
+    return <MaleFloorView onMatch={handleMatch} drinks={drinks} meetingPoints={meetingPoints} />;
   }
   return <FemaleFloorView onMatch={handleMatch} />;
 }
@@ -522,11 +606,25 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
   },
+  optionSubtext: {
+    color: Colors.lightGray,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  priceContainer: {
+    alignItems: 'flex-end',
+  },
   priceText: {
     color: Colors.neonLime,
     fontSize: 16,
     fontWeight: 'bold',
     fontVariant: ['tabular-nums'],
+  },
+  discountText: {
+    color: '#FF6B6B',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
   },
   quantityRow: {
     flexDirection: 'row',
@@ -562,11 +660,29 @@ const styles = StyleSheet.create({
     color: Colors.lightGray,
     fontSize: 14,
   },
+  totalPriceContainer: {
+    alignItems: 'flex-end',
+  },
   totalAmount: {
     color: Colors.neonLime,
     fontSize: 28,
     fontWeight: 'bold',
     fontVariant: ['tabular-nums'],
+  },
+  totalDiscount: {
+    color: '#FF6B6B',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: Colors.lightGray,
+    fontSize: 14,
+    marginTop: 16,
   },
   modalButtons: {
     flexDirection: 'row',
