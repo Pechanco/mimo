@@ -160,6 +160,7 @@ export default function App() {
   const [offers, setOffers] = useState(MOCK_OFFERS);
   const [hasSeenWarning, setHasSeenWarning] = useState(false);
   const [showWarningModal, setShowWarningModal] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
 
   // Match state
   const [matchSignalNumber, setMatchSignalNumber] = useState(77);
@@ -269,6 +270,13 @@ export default function App() {
     setSelectedDrink(null);
     // Simulate match after delay
     setTimeout(() => {
+      // Strong vibration pattern for match notification (important in loud clubs)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 200);
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 400);
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 600);
+      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 800);
+
       setMatchSignalNumber(Math.floor(Math.random() * 99) + 1);
       setMatchDrinkPrice(drinkPrice);
       setMatchDrinkDiscount(drinkDiscount);
@@ -357,8 +365,10 @@ export default function App() {
           <View style={styles.signalMeetingContainer}>
             <Text style={styles.signalMeetingLabel}>MEET AT</Text>
             <Text style={styles.signalMeetingPoint}>1F MAIN BAR</Text>
-            <Text style={styles.signalMeetingDesc}>1階バーカウンターに集合してください</Text>
-            <Text style={styles.signalMeetingDescEn}>Meet at the 1st floor bar counter</Text>
+            <View style={styles.signalMeetingHighlight}>
+              <Text style={styles.signalMeetingDesc}>1階バーカウンターに集合してください</Text>
+              <Text style={styles.signalMeetingDescEn}>Meet at the 1st floor bar counter</Text>
+            </View>
           </View>
 
           {matchQuickMode && (
@@ -502,7 +512,24 @@ export default function App() {
         <View style={styles.floorContainer}>
           <View style={styles.floorHeader}>
             <Text style={styles.floorTitle}>FLOOR</Text>
+            <View style={styles.onlineToggleContainer}>
+              <Text style={[styles.onlineToggleLabel, !isOnline && styles.onlineToggleLabelOff]}>
+                {isOnline ? 'ONLINE' : 'OFFLINE'}
+              </Text>
+              <Switch
+                value={isOnline}
+                onValueChange={setIsOnline}
+                trackColor={{ false: Colors.darkGray, true: 'rgba(166, 255, 0, 0.3)' }}
+                thumbColor={isOnline ? Colors.neonLime : Colors.lightGray}
+                ios_backgroundColor={Colors.darkGray}
+              />
+            </View>
+          </View>
+          <View style={styles.floorSubHeader}>
             <Text style={styles.offerCount}>{pendingOffers.length}/3 オファー中</Text>
+            {!isOnline && (
+              <Text style={styles.offlineWarning}>相手から見えません / Invisible</Text>
+            )}
           </View>
           <FlatList
             data={MOCK_WOMEN}
@@ -701,9 +728,14 @@ const styles = StyleSheet.create({
 
   // Floor
   floorContainer: { flex: 1 },
-  floorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 10 },
+  floorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 6 },
   floorTitle: { color: Colors.white, fontSize: 20, fontWeight: 'bold', letterSpacing: 4 },
+  onlineToggleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  onlineToggleLabel: { color: Colors.neonLime, fontSize: 12, fontWeight: '600', letterSpacing: 1 },
+  onlineToggleLabelOff: { color: Colors.lightGray },
+  floorSubHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 8 },
   offerCount: { color: Colors.neonLime, fontSize: 12, fontWeight: '600' },
+  offlineWarning: { color: '#FF6B6B', fontSize: 11, fontWeight: '500' },
   userGrid: { padding: 8 },
   userCard: { flex: 1, margin: 4, backgroundColor: Colors.cardBg, borderRadius: 16, padding: 10, borderWidth: 1, borderColor: Colors.darkGray, maxWidth: '48%' },
   userPhoto: { width: '100%', aspectRatio: 0.85, backgroundColor: Colors.darkGray, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
@@ -736,8 +768,9 @@ const styles = StyleSheet.create({
   signalMeetingContainer: { alignItems: 'center', marginBottom: 20 },
   signalMeetingLabel: { color: Colors.neonLime, fontSize: 12, letterSpacing: 2, marginBottom: 4 },
   signalMeetingPoint: { color: Colors.white, fontSize: 20, fontWeight: 'bold', letterSpacing: 2 },
-  signalMeetingDesc: { color: Colors.lightGray, fontSize: 12, marginTop: 4 },
-  signalMeetingDescEn: { color: Colors.gray, fontSize: 10, marginTop: 2 },
+  signalMeetingHighlight: { backgroundColor: Colors.neonLime, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8, marginTop: 12, alignItems: 'center' },
+  signalMeetingDesc: { color: Colors.background, fontSize: 16, fontWeight: 'bold' },
+  signalMeetingDescEn: { color: 'rgba(0,0,0,0.7)', fontSize: 12, marginTop: 4 },
   quickModeBadge: { backgroundColor: 'rgba(166, 255, 0, 0.2)', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 16, marginBottom: 16, alignItems: 'center' },
   quickModeBadgeText: { color: Colors.neonLime, fontSize: 14, fontWeight: '600' },
   quickModeDesc: { color: Colors.white, fontSize: 12, marginTop: 6 },
