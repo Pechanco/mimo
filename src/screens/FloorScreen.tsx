@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -74,7 +75,13 @@ const getPartySizeLabel = (size: PartySize): string => {
 };
 
 // Male view component (Catalog)
-function MaleFloorView({ onMatch, drinks, meetingPoints }: { onMatch: (quickMode: boolean) => void; drinks: DrinkItem[]; meetingPoints: string[] }) {
+function MaleFloorView({ onMatch, drinks, meetingPoints, isOnline, setIsOnline }: {
+  onMatch: (quickMode: boolean) => void;
+  drinks: DrinkItem[];
+  meetingPoints: string[];
+  isOnline: boolean;
+  setIsOnline: (value: boolean) => void;
+}) {
   const [selectedUser, setSelectedUser] = useState<FloorUser | null>(null);
   const [selectedDrink, setSelectedDrink] = useState<DrinkItem | null>(drinks[0] || null);
   const [quantity, setQuantity] = useState(2); // Default to pair (×2)
@@ -113,11 +120,16 @@ function MaleFloorView({ onMatch, drinks, meetingPoints }: { onMatch: (quickMode
         {
           text: '送信する / SEND',
           onPress: () => {
-            // Maximum vibration for match (important in loud clubs)
-            for (let i = 0; i < 15; i++) {
+            // MAXIMUM vibration for match (critical in loud clubs)
+            // 40 strong vibrations over 6 seconds for noticeable effect
+            for (let i = 0; i < 40; i++) {
               setTimeout(() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-              }, i * 200);
+                // Double up with notification for stronger effect
+                if (i % 5 === 0) {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }
+              }, i * 150);
             }
             setPendingOffers([...pendingOffers, selectedUser.id]);
             setSelectedUser(null);
@@ -152,7 +164,7 @@ function MaleFloorView({ onMatch, drinks, meetingPoints }: { onMatch: (quickMode
       </View>
       {pendingOffers.includes(item.id) && (
         <View style={styles.pendingBadge}>
-          <Text style={styles.pendingText}>送信中</Text>
+          <Text style={styles.pendingText}>オファー中</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -161,8 +173,24 @@ function MaleFloorView({ onMatch, drinks, meetingPoints }: { onMatch: (quickMode
   return (
     <View style={styles.floorContainer}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>FLOOR</Text>
-        <Text style={styles.offerCount}>{pendingOffers.length}/3 オファー中</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>FLOOR</Text>
+          <Text style={styles.offerCount}>{pendingOffers.length}/3 オファー中</Text>
+        </View>
+        <View style={styles.onlineToggle}>
+          <Text style={[styles.onlineLabel, isOnline && styles.onlineLabelActive]}>
+            {isOnline ? 'ONLINE' : 'OFFLINE'}
+          </Text>
+          <Switch
+            value={isOnline}
+            onValueChange={(value) => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setIsOnline(value);
+            }}
+            trackColor={{ false: Colors.darkGray, true: Colors.neonLime }}
+            thumbColor={Colors.white}
+          />
+        </View>
       </View>
 
       <FlatList
@@ -181,6 +209,20 @@ function MaleFloorView({ onMatch, drinks, meetingPoints }: { onMatch: (quickMode
             <Text style={styles.modalSubtitle}>
               To: {selectedUser?.nickname} ({getPartySizeLabel(selectedUser?.party_size || 'solo')})
             </Text>
+
+            {/* Explanation text */}
+            <View style={styles.explanationBox}>
+              <Text style={styles.explanationText}>
+                この方に乾杯オファーを送れます。{'\n'}
+                ご希望のドリンクの種類を選んでください。{'\n'}
+                ※マッチしたらバーカウンターでお支払いください。
+              </Text>
+              <Text style={styles.explanationTextEn}>
+                Send a cheers offer to this person.{'\n'}
+                Select your preferred drink.{'\n'}
+                *Pay at the bar counter after matching.
+              </Text>
+            </View>
 
             <ScrollView style={styles.modalScroll}>
               {/* Drink Selection */}
@@ -270,7 +312,7 @@ function MaleFloorView({ onMatch, drinks, meetingPoints }: { onMatch: (quickMode
 }
 
 // Female view component (List)
-function FemaleFloorView({ onMatch }: { onMatch: () => void }) {
+function FemaleFloorView({ onMatch }: { onMatch: (quickMode: boolean) => void }) {
   const [offers, setOffers] = useState<Offer[]>(MOCK_OFFERS);
   const [hasSeenWarning, setHasSeenWarning] = useState(false);
   const [pendingAccept, setPendingAccept] = useState<Offer | null>(null);
@@ -291,7 +333,7 @@ function FemaleFloorView({ onMatch }: { onMatch: () => void }) {
   const acceptOffer = (offer: Offer) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setOffers(offers.filter((o) => o.id !== offer.id));
-    onMatch();
+    onMatch(offer.sender.quick_mode || false);
   };
 
   const renderOfferCard = ({ item }: { item: Offer }) => (
@@ -392,6 +434,7 @@ export default function FloorScreen() {
   const [drinks, setDrinks] = useState<DrinkItem[]>(FALLBACK_DRINKS);
   const [meetingPoints, setMeetingPoints] = useState<string[]>(FALLBACK_MEETING_POINTS);
   const [loading, setLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(true); // Online status toggle
 
   // Load drinks and venue data from Supabase
   useEffect(() => {
@@ -446,7 +489,7 @@ export default function FloorScreen() {
   }
 
   if (userGender === 'male') {
-    return <MaleFloorView onMatch={handleMatch} drinks={drinks} meetingPoints={meetingPoints} />;
+    return <MaleFloorView onMatch={handleMatch} drinks={drinks} meetingPoints={meetingPoints} isOnline={isOnline} setIsOnline={setIsOnline} />;
   }
   return <FemaleFloorView onMatch={handleMatch} />;
 }
@@ -471,8 +514,26 @@ const styles = StyleSheet.create({
   },
   offerCount: {
     color: Colors.neonLime,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
+    marginTop: 4,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  onlineToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  onlineLabel: {
+    color: Colors.gray,
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  onlineLabelActive: {
+    color: Colors.neonLime,
   },
   userGrid: {
     padding: 10,
@@ -577,6 +638,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 24,
+  },
+  explanationBox: {
+    backgroundColor: 'rgba(166, 255, 0, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.neonLime,
+  },
+  explanationText: {
+    color: Colors.white,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  explanationTextEn: {
+    color: Colors.lightGray,
+    fontSize: 11,
+    lineHeight: 16,
   },
   modalScroll: {
     maxHeight: 400,

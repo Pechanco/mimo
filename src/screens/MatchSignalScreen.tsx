@@ -28,6 +28,19 @@ export default function MatchSignalScreen() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [borderVisible, setBorderVisible] = useState(true);
 
+  // Strong vibration when match screen appears (critical in loud clubs)
+  useEffect(() => {
+    // 40 strong vibrations over 6 seconds for maximum attention
+    for (let i = 0; i < 40; i++) {
+      setTimeout(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        if (i % 5 === 0) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      }, i * 150);
+    }
+  }, []);
+
   // Pulsing border effect
   useEffect(() => {
     const interval = setInterval(() => {
