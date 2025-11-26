@@ -19,6 +19,59 @@ import {
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 
+// Animated Arrived Button Component
+const AnimatedArrivedButton = ({ onPress }: { onPress: () => void }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(scaleAnim, {
+            toValue: 1.05,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0.8,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [scaleAnim, opacityAnim]);
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+      <Animated.View
+        style={[
+          styles.arrivedButton,
+          { transform: [{ scale: scaleAnim }], opacity: opacityAnim }
+        ]}
+      >
+        <Text style={styles.arrivedButtonTextEn}>ARRIVED</Text>
+        <Text style={styles.arrivedButtonTextJa}>集合場所に到着しました</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
+
 // Slide Button Component
 const SlideButton = ({ onSlideComplete, text, disabled }: { onSlideComplete: () => void; text: string; disabled?: boolean }) => {
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -270,12 +323,17 @@ export default function App() {
     setSelectedDrink(null);
     // Simulate match after delay
     setTimeout(() => {
-      // Strong vibration pattern for match notification (important in loud clubs)
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 200);
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 400);
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 600);
-      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 800);
+      // Maximum strength vibration pattern for match notification (very important in loud clubs)
+      // 10 rapid heavy vibrations over 2 seconds
+      for (let i = 0; i < 10; i++) {
+        setTimeout(() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        }, i * 200);
+      }
+      // Additional notification haptics for emphasis
+      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 2200);
+      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 2600);
+      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 3000);
 
       setMatchSignalNumber(Math.floor(Math.random() * 99) + 1);
       setMatchDrinkPrice(drinkPrice);
@@ -395,10 +453,7 @@ export default function App() {
           </View>
 
           {!hasArrived ? (
-            <TouchableOpacity style={styles.arrivedButton} onPress={handleArrive}>
-              <Text style={styles.arrivedButtonTextEn}>ARRIVED</Text>
-              <Text style={styles.arrivedButtonTextJa}>集合場所に到着しました</Text>
-            </TouchableOpacity>
+            <AnimatedArrivedButton onPress={handleArrive} />
           ) : (
             <View style={styles.slideButtonWrapperSignal}>
               {partnerArrived ? (
@@ -442,6 +497,10 @@ export default function App() {
           </View>
           <Text style={styles.timerLabel}>5分限定モード</Text>
           <Text style={styles.timerSubLabel}>5-Minute Mode</Text>
+          <View style={styles.timerEnjoyContainer}>
+            <Text style={styles.timerEnjoyText}>5分間乾杯、トークをお楽しみください。</Text>
+            <Text style={styles.timerEnjoyTextEn}>Enjoy your 5-minute CHEERS and chat!</Text>
+          </View>
           <TouchableOpacity
             style={styles.homeButton}
             onPress={() => {
@@ -590,7 +649,15 @@ export default function App() {
                   <Text style={styles.partyTag}>{getPartySizeLabel(selectedUser.party_size)}</Text>
                   {selectedUser.quick_mode && <Text style={styles.quickTag}>5min</Text>}
                 </View>
-                <Text style={styles.drinkSelectLabel}>ドリンクを選択</Text>
+                <View style={styles.drinkSelectExplanation}>
+                  <Text style={styles.drinkSelectLabel}>ドリンクを選択</Text>
+                  <Text style={styles.drinkSelectDesc}>この方に乾杯オファーを送れます。</Text>
+                  <Text style={styles.drinkSelectDesc}>ご希望のドリンクの種類を選んでください。</Text>
+                  <Text style={styles.drinkSelectNote}>※マッチしたらバーカウンターでお支払いください</Text>
+                  <Text style={styles.drinkSelectDescEn}>Send a CHEERS offer to this person.</Text>
+                  <Text style={styles.drinkSelectDescEn}>Select your preferred drink below.</Text>
+                  <Text style={styles.drinkSelectNoteEn}>*Pay at the bar counter after matching</Text>
+                </View>
                 <View style={styles.drinkList}>
                   {DRINKS.map(drink => (
                     <TouchableOpacity
@@ -799,6 +866,9 @@ const styles = StyleSheet.create({
   timerText: { color: Colors.neonLime, fontSize: 56, fontWeight: 'bold' },
   timerLabel: { color: Colors.white, fontSize: 18, fontWeight: '600', letterSpacing: 2, marginTop: 40 },
   timerSubLabel: { color: Colors.lightGray, fontSize: 14, letterSpacing: 2, marginTop: 8 },
+  timerEnjoyContainer: { marginTop: 24, alignItems: 'center', paddingHorizontal: 20 },
+  timerEnjoyText: { color: Colors.neonLime, fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  timerEnjoyTextEn: { color: Colors.lightGray, fontSize: 12, textAlign: 'center', marginTop: 6 },
   homeButton: { marginTop: 40, backgroundColor: Colors.darkGray, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 24 },
   homeButtonText: { color: Colors.white, fontSize: 14, fontWeight: '600', letterSpacing: 2 },
 
@@ -830,8 +900,13 @@ const styles = StyleSheet.create({
   userDetailPhoto: { width: 120, height: 120, borderRadius: 60, backgroundColor: Colors.darkGray, justifyContent: 'center', alignItems: 'center', marginTop: 16, marginBottom: 16 },
   userDetailPhotoText: { fontSize: 48, fontWeight: 'bold', color: Colors.lightGray },
   userDetailName: { color: Colors.white, fontSize: 24, fontWeight: 'bold', marginBottom: 12 },
-  userDetailTags: { flexDirection: 'row', gap: 8, marginBottom: 24 },
-  drinkSelectLabel: { color: Colors.lightGray, fontSize: 14, letterSpacing: 2, marginBottom: 16 },
+  userDetailTags: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  drinkSelectExplanation: { alignItems: 'center', marginBottom: 16, paddingHorizontal: 8 },
+  drinkSelectLabel: { color: Colors.neonLime, fontSize: 16, fontWeight: 'bold', letterSpacing: 2, marginBottom: 10 },
+  drinkSelectDesc: { color: Colors.white, fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  drinkSelectNote: { color: Colors.neonLime, fontSize: 12, textAlign: 'center', marginTop: 8, marginBottom: 6 },
+  drinkSelectDescEn: { color: Colors.lightGray, fontSize: 11, textAlign: 'center', lineHeight: 16 },
+  drinkSelectNoteEn: { color: Colors.gray, fontSize: 10, textAlign: 'center', marginTop: 4 },
   drinkList: { width: '100%' },
   drinkItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.cardBg, borderRadius: 12, padding: 16, marginBottom: 8, borderWidth: 1, borderColor: Colors.darkGray },
   drinkInfo: { flex: 1 },
