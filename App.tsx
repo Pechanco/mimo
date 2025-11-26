@@ -323,17 +323,25 @@ export default function App() {
     setSelectedDrink(null);
     // Simulate match after delay
     setTimeout(() => {
-      // Maximum strength vibration pattern for match notification (very important in loud clubs)
-      // 10 rapid heavy vibrations over 2 seconds
-      for (let i = 0; i < 10; i++) {
+      // MAXIMUM strength vibration pattern for match notification (critical in loud clubs)
+      // Phase 1: 15 rapid heavy vibrations over 3 seconds
+      for (let i = 0; i < 15; i++) {
         setTimeout(() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
         }, i * 200);
       }
-      // Additional notification haptics for emphasis
-      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 2200);
-      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 2600);
-      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 3000);
+      // Phase 2: 10 more heavy vibrations (3-5 seconds)
+      for (let i = 0; i < 10; i++) {
+        setTimeout(() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        }, 3000 + i * 200);
+      }
+      // Phase 3: Notification haptics burst (5-6 seconds)
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }, 5000 + i * 300);
+      }
 
       setMatchSignalNumber(Math.floor(Math.random() * 99) + 1);
       setMatchDrinkPrice(drinkPrice);
@@ -612,7 +620,7 @@ export default function App() {
                 </View>
                 {pendingOffers.includes(item.id) && (
                   <View style={styles.pendingBadge}>
-                    <Text style={styles.pendingText}>送信中</Text>
+                    <Text style={styles.pendingText}>オファー中</Text>
                   </View>
                 )}
               </TouchableOpacity>
