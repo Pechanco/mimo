@@ -29,8 +29,13 @@ export default function QRScannerScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setShowUnlocked(true);
 
+      // Extract venue_id from QR code data
+      const venueId = data.replace('mimo://venue/', '') || 'default_venue';
+
       setTimeout(() => {
-        navigation.replace('Main');
+        // Navigate to Profile for registration
+        // TODO: Check if user already has profile, if yes go to StatusInput
+        navigation.replace('Profile');
       }, 2000);
     }
   };
