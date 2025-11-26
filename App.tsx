@@ -364,6 +364,8 @@ export default function App() {
           {matchQuickMode && (
             <View style={styles.quickModeBadge}>
               <Text style={styles.quickModeBadgeText}>5分限定モード / 5-MIN MODE</Text>
+              <Text style={styles.quickModeDesc}>5分経ったら解散してください</Text>
+              <Text style={styles.quickModeDescEn}>Please part ways after 5 minutes</Text>
             </View>
           )}
 
@@ -391,7 +393,7 @@ export default function App() {
             <View style={styles.slideButtonWrapperSignal}>
               {partnerArrived ? (
                 <SlideButton
-                  text="スライドして完了"
+                  text="スライドして注文完了"
                   onSlideComplete={handleMatchComplete}
                 />
               ) : (
@@ -723,7 +725,7 @@ const styles = StyleSheet.create({
 
   // Signal Screen
   signalBorder: { position: 'absolute', top: 20, left: 20, right: 20, bottom: 20, borderWidth: 4, borderColor: Colors.neonLime, borderRadius: 24 },
-  signalContent: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, paddingTop: 60 },
+  signalContent: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, paddingTop: 80, paddingBottom: 100 },
   signalLabel: { color: Colors.lightGray, fontSize: 14, letterSpacing: 6, marginBottom: 8 },
   signalNumber: { color: Colors.white, fontSize: 72, fontWeight: 'bold', marginBottom: 24 },
   signalPriceContainer: { alignItems: 'center', marginBottom: 24, backgroundColor: 'rgba(255,255,255,0.05)', paddingVertical: 16, paddingHorizontal: 32, borderRadius: 16 },
@@ -736,8 +738,10 @@ const styles = StyleSheet.create({
   signalMeetingPoint: { color: Colors.white, fontSize: 20, fontWeight: 'bold', letterSpacing: 2 },
   signalMeetingDesc: { color: Colors.lightGray, fontSize: 12, marginTop: 4 },
   signalMeetingDescEn: { color: Colors.gray, fontSize: 10, marginTop: 2 },
-  quickModeBadge: { backgroundColor: 'rgba(166, 255, 0, 0.2)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginBottom: 16 },
+  quickModeBadge: { backgroundColor: 'rgba(166, 255, 0, 0.2)', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 16, marginBottom: 16, alignItems: 'center' },
   quickModeBadgeText: { color: Colors.neonLime, fontSize: 14, fontWeight: '600' },
+  quickModeDesc: { color: Colors.white, fontSize: 12, marginTop: 6 },
+  quickModeDescEn: { color: Colors.lightGray, fontSize: 10, marginTop: 2 },
   arrivalStatus: { width: '100%', marginBottom: 16 },
   arrivalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
   arrivalLabel: { color: Colors.white, fontSize: 14 },
